@@ -4,9 +4,7 @@ https://tryhackme.com/room/easyctf
   This appears to be a simple Nmap port scan question.
   nmap -p0-1000 [IP]
   should do it.
-  Nmap is a tool that is most well-known for port scanning. It can identify open ports, the services running on them, and even the versions of those services. The -p part of the command
-  tells Nmap which ports to scan specifically. Since we are working with ports under the number 1000, we want to search the ports up to that number. Then we just plug in the IP address
-  that we intend to scan (given by TryHackMe itself), and badabing badaboom, we have an answer!
+  Nmap is a tool that is most well-known for port scanning. It can identify open ports, the services running on them, and even the versions of those services. The -p part of the command tells Nmap which ports to scan specifically. Since we are working with ports under the number 1000, we want to search the ports up to that number. Then we just plug in the IP address that we intend to scan (given by TryHackMe itself), and badabing badaboom, we have an answer!
 
   Nmap scan report for [IP]
   Host is up (0.00057s latency).
