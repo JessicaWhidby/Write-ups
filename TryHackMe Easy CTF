@@ -2,9 +2,10 @@ https://tryhackme.com/room/easyctf
 
 1. How many services are running under port 1000?
   This appears to be a simple Nmap port scan question.
+
   nmap -p0-1000 [IP] should do it.
 
-  Nmap is a tool that is most well-known for port scanning. It can identify open ports, the services running on them, and even the      versions of those services. The -p part of the command tells Nmap which ports to scan specifically. Since we are working with ports   under the number 1000, we want to search the ports up to that number. Then we just plug in the IP address that we intend to scan      (given by TryHackMe itself), and badabing badaboom, we have an answer!
+  Nmap is a tool that is most well-known for port scanning. It can identify open ports, the services running on them, and even the versions of those services. The -p part of the command tells Nmap which ports to scan specifically. Since we are working with ports under the number 1000, we want to search the ports up to that number. Then we just plug in the IP address that we intend to scan (given by TryHackMe itself), and badabing badaboom, we have an answer!
 
   Nmap scan report for [IP]
   Host is up (0.00057s latency).
@@ -14,10 +15,14 @@ https://tryhackme.com/room/easyctf
   80/tcp open  http
 
 2. What is running on the higher port?
-  This question wants to know what service is running on a port HIGHER than what we just found. Port numbers go up to 65535, so one     option we can do is to just adjust our command to 
+  This question wants to know what service is running on a port HIGHER than what we just found. Port numbers go up to 65535, so one option we can do is to just adjust our command to 
+  
   nmap -p1000-65535 [IP] this time and find the answer.
+  
   Or, to make it a bit quicker, we can just try 
+  
   nmap -sV [IP]
+  
   This will scan the *most common* 1,000 ports and report the versions of each service on the open ports. This gives us
 
   Nmap scan report for [IP]
@@ -29,10 +34,11 @@ https://tryhackme.com/room/easyctf
   2222/tcp open  ssh     OpenSSH 7.2p2 Ubuntu 4ubuntu2.8 (Ubuntu Linux; protocol 2.0)
 
 3. What's the CVE you're using against the application?
-  I first went to the webpage being hosted, as we know port 80 is being used on the server. To do this, I went to [IP]:80 in the        browser. It gave us some information, but nothing we can use to determine a CVE or exploit.
-  Next step, FFUF! This stands for Fuzz Faster U Fool. Fuzzing is a term describing the idea of inputting a lot of different words,     numbers, or even nonsense into a field and seeing how the application reacts.
-  I used the command ffuf -u "http://[IP]:80/FUZZ" -w '/usr/share/wordlists/dirb/big.txt' > out.txt, where -u is the URL (or, in this   case, the IP and port), and -w is the wordlist being used. The dirb/big.txt is typically used with dirbuster, but the wordlist        itself can find potential webpages regardless of tool. I just learned about FFUF in my GIAC GCIH course, so I wanted to use that      tool. Finally, the > out.txt means the output will be sent to a new file called out.txt.
+  I first went to the webpage being hosted, as we know port 80 is being used on the server. To do this, I went to [IP]:80 in the browser. It gave us some information, but nothing we can use to determine a CVE or exploit.
+  Next step, FFUF! This stands for Fuzz Faster U Fool. Fuzzing is a term describing the idea of inputting a lot of different words, numbers, or even nonsense into a field and seeing how the application reacts.
+  I used the command ffuf -u "http://[IP]:80/FUZZ" -w '/usr/share/wordlists/dirb/big.txt' > out.txt, where -u is the URL (or, in this case, the IP and port), and -w is the wordlist being used. The dirb/big.txt is typically used with dirbuster, but the wordlist itself can find potential webpages regardless of tool. I just learned about FFUF in my GIAC GCIH course, so I wanted to use that tool. Finally, the > out.txt means the output will be sent to a new file called out.txt.
   Once it was finished running, I ran the command cat out.txt. This will output what the FFUF command caught, so we see:
+ 
   [/.htaccess               [Status: 403, Size: 296, Words: 22, Lines: 12]
   [/.htpasswd               [Status: 403, Size: 296, Words: 22, Lines: 12]
   [/server-status           [Status: 403, Size: 300, Words: 22, Lines: 12]
