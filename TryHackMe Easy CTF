@@ -39,6 +39,7 @@ Nmap is a tool that is most well-known for port scanning. It can identify open p
   [/robots.txt              [Status: 200, Size: 929, Words: 176, Lines: 33]
   [/simple                  [Status: 301, Size: 313, Words: 20, Lines: 10]
 
+  The first 3 don't seem to be of much interest. /Robots.txt just tells search engine crawlers what not to document, so I'm not sure it would tell us much as far as the application we need to exploit.
   /Simple looks interesting. 
 
 4. To what kind of vulnerability is the application vulnerable?
