@@ -2,11 +2,135 @@ OBJECTIVE
 My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result.
 
 TOOLS USED
+Text editor and lots of log analysis.
 
 KEY TAKEAWAYS
-
+I learned how to investigate an actual incident, however small the incident may have been and however edited the log files were. I'm sure a real incident would not have the information needed so zoomed in. I would have to dig a bit more in a live investigation. But it was still great practice to use my analysis muscles and see if I can figure out what happened and when.
 
 https://tryhackme.com/room/juicydetails
 
 STEPS TAKEN
+1. What tools did the attacker use? (Order by the occurrence in the log)
+For this one, let's just open up the access.log file provided. Right off the bat, we can see Nmap in the second line:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:08:34 +0000] "POST / HTTP/1.1" 200 1924 "-" "Mozilla/5.0 (compatible; Nmap Scripting Engine; https://nmap.org/book/nse.html)"
+
+Then, if we scroll down a while, we can see:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+
+Keep on going and we see SQLMap make an appearance:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:29:14 +0000] "GET /rest/products/search?q=1 HTTP/1.1" 200 - "-" "sqlmap/1.5.2#stable (http://sqlmap.org)"
+
+A bit further and we see curl:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:32:51 +0000] "GET /rest/products/search?q=qwert%27))%20UNION%20SELECT%20id,%20email,%20password,%20%274%27,%20%275%27,%20%276%27,%20%277%27,%20%278%27,%20%279%27%20FROM%20Users-- HTTP/1.1" 200 3742 "-" "curl/7.74.0"
+
+And finally:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:34:33 +0000] "GET /a54372a1404141fe8842ae5c029a00e3 HTTP/1.1" 200 1924 "-" "feroxbuster/2.2.1"
+
+Luckily this was a relatively short log file!
+
+
+2. What endpoint was vulnerable to a brute-force attack?
+If we were paying careful attention to the logs in this file earlier, we would see a chunk of logs that look something like this:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:27 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:28 +0000] "GET /rest/user/login HTTP/1.0" 500 - "-" "Mozilla/5.0 (Hydra)"
+
+That sure looks like someone trying to brute force something to me! The same thing being sent to the same endpoint (/rest/user/login) several times in a row all within one second of each other usually indicates a tool trying to brute force something.
+
+
+3. What endpoint was vulnerable to SQL injection?
+Let's go back and look again, this time keeping an eye out for anything that looks like it might be SQL.
+And here we are!
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:29:15 +0000] "GET /rest/products/search?q=%28SELECT%20%28CASE%20WHEN%20%288195%3D8761%29%20THEN%201%20ELSE%20%28SELECT%208761%20UNION%20SELECT%203788%29%20END%29%29 HTTP/1.1" 200 30 "-" "sqlmap/1.5.2#stable (http://sqlmap.org)"
+
+(There was a bit of SQL in the previous few logs, but this one, if you can parse out the text being used, has a full SELECT statement.)
+
+
+4. What parameter was used for the SQL injection?
+Let's take one of these lines as an example:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:29:15 +0000] "GET /rest/products/search?q=1%27cjocta%3C%27%22%3ETuFsMe HTTP/1.1" 500 - "-" "sqlmap/1.5.2#stable (http://sqlmap.org)"
+
+See the "search?q="? That means that you are using the q search box to run your query. Thus, q is the parameter being exploited.
+
+
+5. What endpoint did the attacker try to use to retrieve files? (Include the /)
+If we look towards the end, we see these lines:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:34:40 +0000] "GET /ftp/www-data.bak HTTP/1.1" 403 300 "-" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:34:43 +0000] "GET /ftp/coupons_2013.md.bak HTTP/1.1" 403 78965 "-" ""Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+
+This signals the attacker trying to GET (or download) the files at /ftp/www-data.bak and /ftp/coupons_2013.md.bak. Therefore, the endpoint being attacked is the /ftp endpoint.
+
+
+6. What section of the website did the attacker use to scrape user email addresses?
+You can see certain logs where the user ran "whoami", such as the below:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:09:23 +0000] "GET /rest/user/whoami HTTP/1.1" 200 11 "http://192.168.10.4/" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:09:23 +0000] "GET /rest/products/1/reviews HTTP/1.1" 200 172 "http://192.168.10.4/" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:09:23 +0000] "GET /rest/products/1/reviews HTTP/1.1" 200 172 "http://192.168.10.4/" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+::ffff:192.168.10.5 - - [11/Apr/2021:09:09:24 +0000] "GET /rest/products/1/reviews HTTP/1.1" 304 - "http://192.168.10.4/" "Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0"
+
+To me, that sure looks like they're using the product reviews area to get information.
+
+
+7. Was their brute-force attack successful? If so, what is the timestamp of the successful login? (Yay/Nay, 11/Apr/2021:09:xx:xx +0000)
+There's one lone log where the HTTP code given is 200, which means "OK" (rather than code 401 or 500, which mean unauthorized and internal server error, respectively).
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:16:31 +0000] "POST /rest/user/login HTTP/1.0" 200 831 "-" "Mozilla/5.0 (Hydra)"
+
+Time stamp is right there for all to see in the 4th field, so: Yay, 11/Apr/2021:09:16:31 +0000.
+
+
+8. What user information was the attacker able to retrieve from the endpoint vulnerable to SQL injection?
+If we take a look at the last SQL statement inserted:
+
+::ffff:192.168.10.5 - - [11/Apr/2021:09:32:51 +0000] "GET /rest/products/search?q=qwert%27))%20UNION%20SELECT%20id,%20email,%20password,%20%274%27,%20%275%27,%20%276%27,%20%277%27,%20%278%27,%20%279%27%20FROM%20Users-- HTTP/1.1" 200 3742 "-" "curl/7.74.0"
+
+We can decipher this to mean "UNION SELECT id, email, password." Id isn't relevant here, as it doesn't give us any information to exploit. Therefore, the answer they're looking for is simply email and password.
+
+
+9. What files did they try to download from the vulnerable endpoint? (endpoint from the previous task, question #5)
+Let's refer back to my answer for #5. I already showed exactly what files were downloaded, so just look there again if you end up lost.
+
+
+10. What service and account name were used to retrieve files from the previous question? (service, username)
+Let's pivot over to vsftpd.log, and we can see the bottom several lines:
+
+Sun Apr 11 09:35:37 2021 [pid 8152] [ftp] OK LOGIN: Client "::ffff:192.168.10.5", anon password "?"
+Sun Apr 11 09:35:45 2021 [pid 8154] [ftp] OK DOWNLOAD: Client "::ffff:192.168.10.5", "/www-data.bak", 2602 bytes, 544.81Kbyte/sec
+Sun Apr 11 09:36:08 2021 [pid 8154] [ftp] OK DOWNLOAD: Client "::ffff:192.168.10.5", "/coupons_2013.md.bak", 131 bytes, 3.01Kbyte/sec
+
+Well, we know from previous questions that the last two lines are showing the FTP (service!) transfer of the files we found earlier. Look at the first line, and we see it was an anonymous account that was logged into to perform this action.
+
+
+11. What service and username were used to gain shell access to the server? (service, username)
+In auth.log, we can see one line showing an accepted attempt:
+
+Apr 11 09:41:19 thunt sshd[8260]: Accepted password for www-data from 192.168.10.5 port 40112 ssh2
+
+Looking at the end of the line, we see it was attempted via SSH. Of course, the username used is the one the password was accepted for, which appears to be www-data.
+
+
+And there we have it, our first completed CTF!
 
