@@ -1,5 +1,15 @@
+OBJECTIVE
+My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result.
+
+TOOLS USED
+This is a work in progress, but so far I have used Nmap, Ffuf, and a web browser.
+
+KEY TAKEAWAYS
+So far, I have learned practical uses for Nmap and Ffuf, both of which I had general knowledge of but had only used sparingly outside of classes.
+
 https://tryhackme.com/room/easyctf
 
+STEPS TAKEN
 1. How many services are running under port 1000?
   This appears to be a simple Nmap port scan question.
 
