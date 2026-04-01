@@ -1,0 +1,83 @@
+OBJECTIVE
+I am intrigued by digital forensics and I know it also plays a huge part in blue team roles. For example, SOC analysts have to use forensics to dig into things and see what events are true or false positives, how access was allowed, and what exactly an attacker was able to do.
+
+TOOLS USED
+
+
+KEY TAKEAWAYS
+
+
+STEPS TAKEN
+1. What is the MD5 hash of the E01 image?
+Autopsy defaults to a Data Sources tab. Make sure the correct E01 image is selected, then look towards the bottom and select File Metadata. This shows the MD5 hash 4 lines down.
+
+3f08c518adb3b5c1359849657a9b2079
+
+
+2. What is the computer account name?
+If we go to the left pane, we can see an option called Operating System Information. The SYSTEM name is what we're looking for here:
+
+DESKTOP-0R59DJ3
+
+
+3. List all the user accounts. (alphabetical order)
+Back to the left pane, right under Operating System Information is a tab called Operating System User Account. Let's sort by the Username tab. Eliminate the ones such as Administrator, DefaultAccount, and Guest, as those are not actual users but default accounts.
+
+H4S4N,joshwa,keshav,sandhya,shreya,sivapriya,srini,suba
+
+
+4. Who was the last user to log into the computer?
+In that same pane, let's sort by Date Accessed instead. It appears that the most recent date anyone accessed the computer was 2021-02-07 12:05:37. Let's scroll back over to the Username field and see who that was.
+
+sivapriya
+
+
+5. What was the IP address of the computer?
+We have to poke around a bit here. On a whim, I looked at the installed programs, just to see if we could gather any clues. Here, I found a program called:
+
+Look@LAN 2.50 Build 35	
+
+Well, isn't that suspicious! Let's see if we can dig into this some more. Expand the Data Sources tab, go to vol3, look at Program Files (x86), and go into the Look@LAN folder. If we take a look at irunin.ini, we can see some valuable info. Specifically, we can see:
+
+%LANIP%=192.168.130.216
+
+
+6. What was the MAC address of the computer? (XX-XX-XX-XX-XX-XX)
+We know already that a MAC address is attached to the network card, or the NIC. So if we take a look just one line below the IP, we will see:
+
+%LANNIC%=0800272cc4b9
+
+
+7. What is the name of the network card on this computer?
+
+
+8. What is the name of the network monitoring tool?
+We've already established that it's called Look@LAN.
+
+
+9. A user bookmarked a Google Maps location. What are the coordinates of the location?
+Let's go back over to the left pane and go Web Bookmarks. We can find exactly 1 Google search. Let's expand that result:
+
+12°52'23.0"N 80°13'25.0"E
+
+
+10. A user has his full name printed on his desktop wallpaper. What is the user's full name?
+
+
+
+11. A user had a file on her desktop. It had a flag but she changed the flag using PowerShell. What was the first flag?
+
+
+12. The same user found an exploit to escalate privileges on the computer. What was the message to the device owner?
+Let's take a look at exploit.ps1; sounds like a reasonable place to start. In that file, make sure you're under the Text > Indexed Text tab (on the bottom pane), and you'll see:
+
+Add-Content C:\Users\H4S4N\Desktop\hacked.txt 'Flag{I-hacked-you}'
+
+
+13. 2 hack tools focused on passwords were found in the system. What are the names of these tools? (alphabetical order)
+
+
+14. There is a YARA file on the computer. Inspect the file. What is the name of the author?
+
+
+15. One of the users wanted to exploit a domain controller with an MS-NRPC based exploit. What is the filename of the archive that you found? (include the spaces in your answer) 
