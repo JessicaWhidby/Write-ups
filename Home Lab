@@ -3,7 +3,7 @@ My goal here is to learn more about how to practically apply the tools and knowl
 
 TOOLS USED
 VMWare
-Kali Linux, Windows 10, Windows Server 2025
+Kali Linux, Windows 11, Windows Server 2025
 Nessus for vulnerability scanning
 Splunk for alerts and investigations
 Zenmap for network discovery and diagramming
@@ -14,4 +14,7 @@ KEY TAKEAWAYS
 
 SETUP
 First I had to get all my virtual machines installed and ready before I could use them to practice. I did put them all on the same VMnet, meaning they were essentially put into their own isolated network away from my other VMs. They would all be able to connect to the Internet and to each other, though. I also set easily recognizable names for each VM so I could easily tell them apart if I'm connecting from one to the other. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example. It just makes things a lot easier.
-After installing all of the OSs, I had to set up the Server VM with Active Directory so I can add all of the computers to a domain. In Server Manager, I went to Add Roles & Features, Role-based or feature-based installation, Active Directory Domain Services (I also added in DHCP and DNS). 
+After installing all of the OSs, I had to set up the Server VM with Active Directory so I can add all of the computers to a domain. In Server Manager, I went to Add Roles & Features, Role-based or feature-based installation, Active Directory Domain Services (I also added in DHCP and DNS). Once the features are installed, I need to click to promote the server to domain controller and to finish up the DHCP process.
+I did run into an error promoting the server, which was that the Admin password was weak. No worries, I just opened up CMD as Administrator, ran "net user Administrator [password]", and we were all good. I also got a warning that the server didn't have a static IP, so I went into Settings > Ethernet > IP assignment > Edit and gave it an easy to remember (for me) IP and subnet mask.
+Once that was complete, I went into Active Directory Users & Computers and set up a few accounts, just so I can have something to play around with later.
+And with all that being done, it's time to add Kali and Windows 10 to the domain! In Windows, it's relatively easy. First, I have to go into the Network Settings and set the DNS server to the IP of the Server machine. From there, it's as easy as going into the Settings, going to Account settings, Access work or school, and adding it to the domain.
