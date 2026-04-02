@@ -2,6 +2,16 @@ OBJECTIVE
 My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Splunk.
 
 TOOLS USED
-VMWare, Kali Linux, Windows 10, Windows Server
+VMWare
+Kali Linux, Windows 10, Windows Server 2025
+Nessus for vulnerability scanning
+Splunk for alerts and investigations
+Zenmap for network discovery and diagramming
+WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
 
 KEY TAKEAWAYS
+
+
+SETUP
+First I had to get all my virtual machines installed and ready before I could use them to practice. I did put them all on the same VMnet, meaning they were essentially put into their own isolated network away from my other VMs. They would all be able to connect to the Internet and to each other, though. I also set easily recognizable names for each VM so I could easily tell them apart if I'm connecting from one to the other. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example. It just makes things a lot easier.
+After installing all of the OSs, I had to set up the Server VM with Active Directory so I can add all of the computers to a domain. In Server Manager, I went to Add Roles & Features, Role-based or feature-based installation, Active Directory Domain Services (I also added in DHCP and DNS). 
