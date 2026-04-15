@@ -3,18 +3,23 @@ My goal here is to learn more about how to practically apply the tools and knowl
 
 TOOLS USED
 VMWare
-Kali Linux, Windows 10, Windows Server 2025
+Kali Linux, Windows 10, Windows Server 2022
 Nessus for vulnerability scanning
 Splunk for alerts and investigations
 Zenmap for network discovery and diagramming
 WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
 
 KEY TAKEAWAYS
-
+I learned how to:
+Setup a network
+Setup an AD domain and add users and computers
+Scan the new network with nmap/Zenmap
+Scan for vulnerabilities
+This is an excellent learning experience, and I hope to continue to build on it in the future. I am sure that the skills I have developed here will translate well into a professional environment.
 
 SETUP
-First I had to get all my virtual machines installed and ready before I could use them to practice. I did put them all on the same VMnet, meaning they were essentially put into their own isolated network away from my other VMs. They would all be able to connect to the Internet and to each other, though. I also set easily recognizable names for each VM so I could easily tell them apart if I'm connecting from one to the other. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example. It just makes things a lot easier.
-After installing all of the OSs, I had to set up the Server VM with Active Directory so I can add all of the computers to a domain. In Server Manager, I went to Add Roles & Features, Role-based or feature-based installation, Active Directory Domain Services (I also added in DHCP and DNS). Once the features are installed, I need to click to promote the server to domain controller and to finish up the DHCP process.
+First I had to get all my virtual machines installed and ready before I could use them to practice. I also set easily recognizable names for each VM so I could easily tell them apart if I'm connecting from one to the other. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example. It just makes things a lot easier.
+After installing all of the OSs, I had to set up the Server VM with Active Directory so I can add all of the computers to a domain. In Server Manager, I went to Add Roles & Features, Role-based or feature-based installation, Active Directory Domain Services. Once the features are installed, I need to click to promote the server to domain controller and to finish up the DHCP process.
 I did run into an error promoting the server, which was that the Admin password was weak. No worries, I just opened up CMD as Administrator, ran "net user Administrator [password]", and we were all good. I also got a warning that the server didn't have a static IP, so I went into Settings > Ethernet > IP assignment > Edit and gave it an easy to remember (for me) IP and subnet mask.
 Once that was complete, I went into Active Directory Users & Computers and set up a few accounts, just so I can have something to play around with later.
 And with all that being done, it's time to add Kali and Windows 10 to the domain! In Windows, it's relatively easy. First, I have to go into the Network Settings and set the DNS server to the IP of the Server machine. I also gave the Windows 10 machine a static IP for simplicity. From there, it's as easy as going into the Settings, going to Account settings, Access work or school, Connect, join to a local AD domain, and adding it to the domain. I had to input credentials of a domain admin to allow it on the domain, and voila, now we have a domain!
@@ -26,3 +31,11 @@ sudo realm discover [domain]
 And then it's as easy as:
 sudo realm join --user=[domain admin] [domain]
 And there we go! Now we're ready to play around with the fun stuff!
+
+FIRST PROJECT
+To start with, I figured I would login to Kali with my fancy new AD credentials (username@DOMAIN.EXAMPLE in the username field) and try to get a network map with Zenmap. I used the default nmap -A -T4 scan, with the network info added in to the end of the command. I won't show the image here, but I will say it successfully found both other hosts (the server and the Windows 10 machine), identified open ports, and identified the OS (within reasonable margin of error). It gives a nice rundown of everything it finds under Host Details of each host (which can be found on the left pane). Overall, very neat way to map my own network and see what it's got going on. It will likely be a big help in future projects to be able to refer back to this topology.
+
+SECOND PROJECT
+Now that I know what's on my network (not that I didn't already know), I can do some vulnerability scanning. I want to do this to learn how the scanning works and learn how to best remediate findings. Of course, a home lab environment is quite a bit different from an enterprise environment, but it's a learning process anyway.
+I'll use Tenable Nessus for my scanning purposes. After a successful install, it opens in the browser. However, it didn't want to let me create the user in the web GUI, so I had to open CMD as admin and navigate to the Nessus folder. Then I had to run "nessuscli adduser" and follow the instructions there to add the admin user. Then I was able to login via the web GUI. Unfortunately, the option to start a scan was missing, and I got an error that there were no plugins. Back to the CMD, I ran:
+nessuscli update --all
