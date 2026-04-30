@@ -4,7 +4,6 @@ My goal here is to learn more about how to practically apply the tools and knowl
 TOOLS USED
 VMWare
 Kali Linux, Windows 10, Windows Server 2025
-Nessus for vulnerability scanning
 Splunk for alerts and investigations
 Zenmap for network discovery and diagramming
 WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
@@ -36,6 +35,4 @@ FIRST PROJECT
 To start with, I figured I would login to Kali with my fancy new AD credentials (username@DOMAIN.EXAMPLE in the username field) and try to get a network map with Zenmap. I used the default nmap -A -T4 scan, with the network info added in to the end of the command. I won't show the image here, but I will say it successfully found both other hosts (the server and the Windows 10 machine), identified open ports, and identified the OS (within reasonable margin of error). It gives a nice rundown of everything it finds under Host Details of each host (which can be found on the left pane). Overall, very neat way to map my own network and see what it's got going on. It will likely be a big help in future projects to be able to refer back to this topology.
 
 SECOND PROJECT
-Now that I know what's on my network (not that I didn't already know), I can do some vulnerability scanning. I want to do this to learn how the scanning works and learn how to best remediate findings. Of course, a home lab environment is quite a bit different from an enterprise environment, but it's a learning process anyway.
-I'll use Tenable Nessus for my scanning purposes. After a successful install, it opens in the browser. However, it didn't want to let me create the user in the web GUI, so I had to open CMD as admin and navigate to the Nessus folder. Then I had to run "nessuscli adduser" and follow the instructions there to add the admin user. Then I was able to login via the web GUI. Unfortunately, the option to start a scan was missing, and I got an error that there were no plugins. Back to the CMD, I ran:
-nessuscli update --all
+
