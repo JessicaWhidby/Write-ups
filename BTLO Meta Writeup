@@ -1,0 +1,26 @@
+This one promises some interesting digital forensics challenges, so let's dive in!
+We start with another zip file with password "btlo", so let's extract that first and then look at the questions.
+
+What is the camera model?
+Seems we have to start with some metadata. Let's right click the image and go to Properties. From there, go to the Image tab, and we see:
+Camera Model: Canon EOS 550D
+
+When was the picture taken?
+Same tab, there's a Date Taken line:
+2021:11:02 13:20:23
+
+What does the comment on the first image says? 
+Ah, something we can't find from the Properties tab!
+I remember using exiftool in my SANS courses, which can read and write metadata that maybe isn't shown in the Properties. Syntax is:
+exiftool -f [file]
+Where the -f switch forces the command to output all tags. I had to look this one up, as just running "exiftool pfile]" does not give us any comments.
+After running, we see this line:
+Comment: relying on altered metadata to catch me?
+
+Where could the criminal be?
+Well, the handy dandy exiftool also gives us this information with the previous command:
+GPS Latitude                    : 32 deg 40' 3.87" S
+GPS Longitude                   : 279 deg 29' 31.87" W
+But if we try to look this up, we get an error saying this is invalid information.
+Next idea; let's try a reverse image search. Sometimes we have to backtrack to a simpler solution rather than going right for GPS coordinates.
+Using Google's reverse image search, it is revealed that they are likely in Kathmandu.
