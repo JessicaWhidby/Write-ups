@@ -1,0 +1,9 @@
+Alright, let's dive into Blue Team Labs Online! Starting with an easy one, Follina, we are given an infected zip file to analyze.
+
+Question 1) What is the SHA1 hash value of the sample? (Format: SHA1Hash)
+The password for the archive is given to us next to the download button, so extract using password "infected".
+And lucky for me, I just learned all sorts of Linux commands during my time spent in the SANS Cyber Academy.
+Let's open Kali and run a simple:
+sha1sum sample.doc
+And we get:
+06727ffda60359236a8029e0b3e8a0fd11c23313
