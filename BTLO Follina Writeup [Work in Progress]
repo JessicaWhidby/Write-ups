@@ -35,3 +35,14 @@ taskkill /f /im msdt.exe
 So msdt.exe is the answer!
 
 Question 7) You were asked to write a process-based detection rule using Windows Event ID 4688. What would be the ProcessName and ParentProcessname used in this detection rule? [Hint: OSINT time!] (Format: ProcessName, ParentProcessName)
+The above link also gives us this information:
+"Payloads executed by this attack vector will create a child process of msdt.exe under the offending Microsoft Office parent."
+So the answer is "msdt.exe, winword.exe."
+
+Question 8) Submit the MITRE technique ID used by the sample for Execution [Hint: Online sandbox platforms can help!] (Format: TXXXX)
+If we go back to VirusTotal, under Behavior, we can also see the MITRE techniques for each aspect of the malware. I just tried each one under Execution, and the answer was T1559.
+
+Question 9) Submit the CVE associated with the vulnerability that is being exploited (Format: CVE-XXXX-XXXXX)
+Simple Google search, first hit from OWASP, gives us this answer: CVE-2022-30190.
+
+And there we have it; our first BTLO completed challenge!
