@@ -7,3 +7,31 @@ Let's open Kali and run a simple:
 sha1sum sample.doc
 And we get:
 06727ffda60359236a8029e0b3e8a0fd11c23313
+
+Question 2) According to VirusTotal, what is the full filetype of the provided sample? (Format: X X X X)
+Well, let's meander on over to the VirusTotal website and see, shall we? If we load that file into the website, we get some nice details, conveniently in the Details pane. And a few lines down, we see a File Type line with the value: Office Open XML Document.
+Boom, there we go!
+
+Question 3) Extract the URL that is used within the sample and submit it (Format: https://x.domain.tld/path/to/something)
+If we then make our way to the Relations tab, we see "Contacted URLs." Well, the longest/most specific one is  	https://www.xmlformats.com/office/word/2022/wordprocessingDrawing/RDF842l.html, so we try that as the answer and it works!
+
+Question 4) What is the name of the XML file that is storing the extracted URL? (Format: file.name.ext)
+If we go to "Bundled Files," the first one we see is:
+word/_rels/document.xml.rels
+So let's try the end of that one. And it works!
+
+Question 5) The extracted URL accesses a HTML file that triggers the vulnerability to execute a malicious payload. According to the HTML processing functions, any files with fewer than <Number> bytes would not invoke the payload. Submit the <Number> (Format: Number of Bytes)
+And here is where our time with VirusTotal ends. We have to resort to good ol' Google for this one (Google is your friend!).
+This article here gives us some good info about the Follina vulnerability itself:
+https://www.hackthebox.com/blog/cve-2022-30190-follina-explained
+And tells us that "The secondary payload must surpass 4096 bytes to evade specific size checks."
+So there we go: the answer is 4096.
+
+Question 6) After execution, the sample will try to kill a process if it is already running. What is the name of this process? (Format: filename.ext)
+Here we go to another site (which also would have answered the previous question, but I digress).
+https://www.huntress.com/blog/microsoft-office-remote-code-execution-follina-msdt-bug
+And here we find that there is a Base64 string that decodes to:
+taskkill /f /im msdt.exe
+So msdt.exe is the answer!
+
+Question 7) You were asked to write a process-based detection rule using Windows Event ID 4688. What would be the ProcessName and ParentProcessname used in this detection rule? [Hint: OSINT time!] (Format: ProcessName, ParentProcessName)
