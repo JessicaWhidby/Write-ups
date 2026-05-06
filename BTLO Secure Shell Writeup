@@ -1,0 +1,90 @@
+And now we have our first hard challenge!
+
+Is it an internal or external attack, what is the attacker IP? 
+Let's open up this log file, shall we?
+After a little bit of scrolling, a line with different wording sticks out like a sore thumb:
+
+8380 2021-04-29 23:52:50.648 Connection from 192.168.1.17 port 49340 on 192.168.1.20 port 22
+
+192.168.x.x IPs are set aside for internal use, so the answer is "internal/192.168.1.17"
+
+
+
+How many valid accounts did the attacker find, and what are the usernames?
+First, let's try and find our the syntax used to symbolize an attempt at logging in. I ran "grep "user" [file]" and, after some searching, I found a line that looks like it has potential:
+
+7300 2021-04-30 01:01:08.109 debug1: auth2_challenge: user=sophia devs= [preauth]
+
+From there, I grepped "user=" and saw user=admin and user=sophia.
+Unfortunately, that was not the answer.
+Well, we know from basic security practices that the admin user isn't typically supposed to be active. So let's grep "admin," and we find a line saying:
+
+7036 2021-04-30 01:16:00.352 Connection closed by invalid user admin 192.168.1.17 port 42494 [preauth]
+
+So luckily, admin is an invalid user. Therefore, the answer is 1:sophia.
+
+
+
+How many times did the attacker login to these accounts?
+For this one, I kept using grep, but with a pipe.
+
+grep "sophia" '/home/jessi/Downloads/sshlog.log' | grep "authenticated"
+
+This will search for the sophia username, and then search that output again and show me the lines where she was successfully authenticated (AKA logged in).
+
+7176 2021-04-30 00:53:25.023 debug1: monitor_child_preauth: sophia has been authenticated by privileged process
+7300 2021-04-30 01:01:11.699 debug1: monitor_child_preauth: sophia has been authenticated by privileged process
+
+Answer: 2
+
+
+
+When was the first request from the attacker recorded?
+Let's try this command on for size:
+
+grep "Connection from" '/home/jessi/Downloads/sshlog.log' | head
+
+The "head" at the end will show us just the first 10, so we can easily see the first one instead of scrolling back up for who knows how long.
+This is the output:
+
+8164 2021-04-29 23:41:56.516 Connection from ::1 port 63657 on ::1 port 22
+8860 2021-04-29 23:42:21.561 Connection from ::1 port 63676 on ::1 port 22
+9040 2021-04-29 23:42:22.442 Connection from ::1 port 63678 on ::1 port 22
+32 2021-04-29 23:42:23.209 Connection from ::1 port 63679 on ::1 port 22
+8932 2021-04-29 23:52:25.989 Connection from 192.168.1.17 port 49338 on 192.168.1.20 port 22
+8380 2021-04-29 23:52:50.648 Connection from 192.168.1.17 port 49340 on 192.168.1.20 port 22
+4544 2021-04-29 23:53:04.832 Connection from 192.168.1.17 port 49342 on 192.168.1.20 port 22
+852 2021-04-29 23:59:10.994 Connection from 192.168.1.17 port 49816 on 192.168.1.20 port 22
+8144 2021-04-29 23:59:12.298 Connection from 192.168.1.17 port 51136 on 192.168.1.20 port 22
+1360 2021-04-29 23:59:13.592 Connection from 192.168.1.17 port 53088 on 192.168.1.20 port 22
+
+However, we know that ::1 is the IPv6 loopback address, aka the address that signifies to go to the same machine that is producing the logs.
+The first one that isn't from ::1 but from the attacker, 192.168.1.17, was on 2021-04-29 23:52:25.989.
+
+
+What is the log level for the log file? 
+First, what IS a log level? This source should help us out with that:
+https://www.crowdstrike.com/en-us/cybersecurity-101/next-gen-siem/logging-levels/
+Well, now that we know what we could be looking for, let's run:
+
+head [file]
+
+And we get:
+
+8844 2021-04-29 23:31:54.823 debug2: fd 3 setting O_NONBLOCK
+8844 2021-04-29 23:31:54.823 debug3: sock_set_v6only: set socket 3 IPV6_V6ONLY
+8844 2021-04-29 23:31:54.823 debug1: Bind to port 22 on ::.
+8844 2021-04-29 23:31:54.823 Server listening on :: port 22.
+8844 2021-04-29 23:31:54.823 debug2: fd 4 setting O_NONBLOCK
+8844 2021-04-29 23:31:54.823 debug1: Bind to port 22 on 0.0.0.0.
+8844 2021-04-29 23:31:54.823 Server listening on 0.0.0.0 port 22.
+7524 2021-04-29 23:41:54.090 debug2: fd 3 setting O_NONBLOCK
+7524 2021-04-29 23:41:54.090 debug3: sock_set_v6only: set socket 3 IPV6_V6ONLY
+7524 2021-04-29 23:41:54.090 debug1: Bind to port 22 on ::.
+
+So, it appears it's a debug log.
+
+
+Where is the log file located in Windows?
+This can be a simple Google search.
+C:\ProgramData\ssh\logs\sshd.log
