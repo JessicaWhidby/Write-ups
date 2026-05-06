@@ -1,0 +1,45 @@
+I love looking into (potential) phishing emails and determining what is malicious and what isn't. It's something I had to do on help desk a lot, and it's a puzzle I enjoy solving even today. I plan to even launch and investigate my own in my home lab eventually. The provided information is just an email sample, with all the headers and such included.
+Let's get started!
+
+What is the sending email address? 
+Well let's just look for a From line, shall we?
+From: Amazn <amazon@zyevantoby.cn>
+
+What is the recipient email address?
+And right below the previous line:
+To: saintington73 <saintington73@outlook.com>
+
+What is the subject line of the email?
+And right below that:
+Subject: Your Account has been locked
+
+What company is the attacker trying to imitate?
+Let's refer back to question 1, and we see it is from "Amazn." Sure looks a lot like it's trying to say "Amazon" without getting into legal gray areas to me.
+
+What is the date and time the email was sent? (As copied from a text editor)
+Right below the subject line:
+Date: Wed, 14 Jul 2021 01:40:32 +0900
+
+What is the URL of the main call-to-action button?
+Ah, something a little tricker! If we scroll down, we see a HUUUGE chunk of Base64, as indicated by the line above the massive encoded text. (Look at the second chunk of Base64.) Decoding that gets us a lot of information, but here is what we are looking for:
+title="Review Account" class="mcnButton" style="text-align: center; color: rgb(255, 255, 255); line-height: 100%; letter-spacing: normal; font-weight: bold; text-decoration: none;" 
+
+That tells us the next piece will show us where the "Review Account" button goes:
+
+href="https://emea01.safelinks.protection.outlook.com/?url=https%3A%2F%2Famaozn.zzyuchengzhika.cn%2F%3Fmailtoken%3Dsaintington73%40outlook.com&amp;data=04%7C01%7C%7C70072381ba6e49d1d12d08d94632811e%7C84df9e7fe9f640afb435aaaaaaaaaaaa%7C1%7C0%7C637618004988892053%7CUnknown%7CTWFpbGZsb3d8eyJWIjoiMC4wLjAwMDAiLCJQIjoiV2luMzIiLCJBTiI6Ik1haWwiLCJXVCI6Mn0%3D%7C1000&amp;sdata=oPvTW08ASiViZTLfMECsvwDvguT6ODYKPQZNK3203m0%3D&amp;reserved=0"
+
+Look at the URL using URL2PNG. What is the first sentence (heading) displayed on this site? (regardless of whether you think the site is malicious or not)
+https://www.url2png.com/
+Interesting; I've never used this site before. Let's see what happens.
+Anddd maybe there's a reason I haven't used it before. It doesn't want to load anything. So, full disclosure, I found a walkthrough of this lab where it DID load for someone else. It apparently says, "This web page could not be loaded." Ironic.
+
+When looking at the main body content in a text editor, what encoding scheme is being used?
+Base64 - we established this earlier.
+
+What is the URL used to retrieve the company's logo in the email? 
+Let's go back to that block of decoded Base64 and see, shall we? I just CTRL+F "logo" and came across this:
+https://images.squarespace-cdn.com/content/52e2b6d3e4b06446e8bf13ed/1500584238342-OX2L298XVSKF8AO6I3SV/amazon-logo?format=750w&amp;content-type=image%2Fpng
+So there we have it!
+
+For some unknown reason one of the URLs contains a Facebook profile URL. What is the username (not necessarily the display name) of this account, based on the URL? 
+Same technique as above, I found: "amir.boyka.7"
