@@ -1,0 +1,17 @@
+I enjoy investigating phishing emails - let's dive into an easy one to see how this platform works.
+
+What is the return path of the email?
+Let's go to the top and go to View > Headers > All. And there we see a bunch more information at the top of the email. If we scroll a bit within that, we find:
+Return-Path <bounce@rjttznyzjjzydnillquh.designclub.uk.com>
+
+What is the domain name of the url in this mail?
+Let's hover over the links in the body of the email. We see that they all start with storage.googleapis.com.
+
+Is the domain mentioned in the previous question suspicious?
+If we do a quick search on the domain, we see that storage.googleapis.com is legit, but also frequently used maliciously. So yes, it is suspicious and should at least be worth looking into.
+
+What is the body SHA-256 of the domain?
+Let's plug in "storage.googleapis.com" into VirusTotal and we get: 13945ecc33afee74ac7f72e1d5bb73050894356c4bf63d02a1a53e76830567f5
+
+Is this email a phishing email?
+Yeah, probably. It looks sketchy even before you go digging, and investigation sure didn't help its case.
