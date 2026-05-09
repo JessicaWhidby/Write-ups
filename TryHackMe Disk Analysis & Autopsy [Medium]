@@ -1,0 +1,56 @@
+I love using Autopsy (I love forensics in general, it seems). Let's see how this lab treats us.
+
+What is the MD5 hash of the E01 image?
+Here, we click the data source, go to Summary, then Container, and there we see:
+3f08c518adb3b5c1359849657a9b2079
+
+What is the computer account name?
+Let's go to the left pane again, go to Operating System Information, and there we have it: DESKTOP-0R59DJ3.
+
+List all the user accounts. (alphabetical order)
+Right under Operating System Information is Operating System User Account.
+H4S4N,joshwa,keshav,sandhya,shreya,sivapriya,srini,suba
+
+Who was the last user to log into the computer?
+Same detail pane, scroll to the right and you'll see Date Accessed.
+sivapriya
+
+What was the IP address of the computer?
+Let's go back to the top and open volume 3. If we go into Program FIles (x86), we'll see an interesting program called Look@LAN. Open up irunin.ini and you'll find it there.
+192.168.130.216
+
+What was the MAC address of the computer? (XX-XX-XX-XX-XX-XX)
+Same place (under LANNIC, because the MAC address resides on the NIC): 0800272cc4b9
+
+What is the name of the network card on this computer?
+And our time in that file has run out. According to a quick Google search, we can find network card names in HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\NetworkCards.
+If we go back to Operating System Information and instead of clicking SYSTEM, we click SOFTWARE, go into Microsoft, Windows NT, CurrentVersion, Network Cards, 2, Description, and look in the Details pane: Intel(R) PRO/1000 MT Desktop Adapter.
+
+What is the name of the network monitoring tool?
+We covered this already - Look@LAN.
+
+A user bookmarked a Google Maps location. What are the coordinates of the location?
+If we go back to the left pane, there's a Web Bookmarks bar. Digging around in that gives us: 12°52'23.0"N 80°13'25.0"E
+
+A user has his full name printed on his desktop wallpaper. What is the user's full name?
+It seems this one is broken - if we go to Images/Videos at the top, there are supposed to be previews of what you click. Those did not work, nor did extracting and opening. So, admittedly, I had to look this one up. Anto Joshwa.
+
+A user had a file on her desktop. It had a flag but she changed the flag using PowerShell. What was the first flag?
+So I dug around on Google and then in the file system myself a bit and found that PowerShell history is typically stored in [user]\AppData\Roaming\Microsoft\Windows\Powershell\PSReadLine. So now it's a matter of searching through each user's file system. After a few minutes, we find that it was shreya, and the flag was flag{HarleyQuinnForQueen}.
+
+The same user found an exploit to escalate privileges on the computer. What was the message to the device owner?
+Let's keep looking around on shreya's account, shall we? She knows too much. If we go to her Desktop, we see exploit.ps1. Opening that reveals this line:
+Add-Content C:\Users\H4S4N\Desktop\hacked.txt 'Flag{I-hacked-you}'
+
+2 hack tools focused on passwords were found in the system. What are the names of these tools? (alphabetical order)
+Let's go through each user's folders again and see what we find.
+What d'ya know, right under H4S4N, we find mimikatz in the Downloads folder. Unfortunately, after that, our luck runs out. We have to look elsewhere for the other one.
+After some searching around for where else this may be stored, I saw someone mention Windows Defender. This is true; Defender sure does like to block hacking tools, even if you're using them, well, against yourself. Let's go back to the file system and see if we can find anything for Defender.
+If we to Program Data, Microsoft, Windows Defender, we find a Scans folder. In there, we find Service, Detection History. The 3rd folder down, conveniently (or not) named 02, we have 3 files. The first two point to Mimikatz again, while the last points to LaZagne.
+
+There is a YARA file on the computer. Inspect the file. What is the name of the author?
+I'm just going to search for ".yar" in the search function at the top right and see where that gets us.
+A HA! We find kiwi_passwords.yar.lnk, and we can see it's in H4S4N's directory. So let's go hunting there (going straight to the file didn't give us anymore information). Let's go back to his Downloads folder, and there we find the original file and the answer: Benjamin DELPY (gentilkiwi)
+
+One of the users wanted to exploit a domain controller with an MS-NRPC based exploit. What is the filename of the archive that you found? (include the spaces in your answer) 
+I did another search here, then right clicked and had it take me to the location in the directory (since it gave us a .lnk file). If we click Recent, it shows us all of the files. If we click Recent Documents Artifact we see: Path : C:\Users\sandhya\Downloads\2.2.0 20200918 Zerologon encrypted.zip. Use that last part as the file name, and there ya have it; you're done with this lab!
