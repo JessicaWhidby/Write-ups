@@ -1,0 +1,23 @@
+Let's dive into an actual investigation you'd see in a SOC environment. This one features use of Splunk as a SIEM, as well.
+The format of this one is a bit different. We are just given alerts that we have to triage and decide if they are true or false positives and why.
+
+The first alert we get is classified as Inbound Email Containing Suspicious External Link. Let's find the link.
+This is the email content:
+Hi Ms. Garcia,\n\nWelcome to TheTryDaily!\n\nAs part of your onboarding, please complete your final profile setup so we can configure your access.\n\nKindly please click the link below:\n\n<a href="https://hrconnex.thm/onboarding/15400654060/j.garcia">Set Up My Profile</a>.\n\nIf you have questions, please reach out to the HR Onboarding Team.
+So we see that the potentially suspicious link is: https://hrconnex.thm/onboarding/15400654060/j.garcia
+Our next step is going to be to search for this link in Splunk. We go to the New Search bar, erase the * (which means it would show everything), insert the link, and I like to set the time frame to something beyond what we know we're looking at, so let's set it for a few days. Apply the filter and search.
+We see that this is the only log for that link. Therefore, no link was clicked. Furthermore, "hrconnex.thm" is probably legitimate, with THM standing for - you guessed it - TryHackMe.
+I'm going to classify this as false positive and fill in the details with the log from Splunk.
+
+Next, we get another alert of the same type. Let's go check this email for anything suspicious. Here is the content of that email:
+Dear Customer,\n\nWe were unable to deliver your package due to an incomplete address.\n\nPlease confirm your shipping information by clicking the link below:\n\nhttp://bit.ly/3sHkX3da12340\n\nIf we don’t hear from you within 48 hours, your package will be returned to sender.\n\nThank you,\n\nAmazon Delivery
+Yeah, this screams suspicious. There is a sense of urgency, an obfuscated (bit.ly) URL to click on, and why would anyone use their work email for Amazon anyway? Let's plug the link (http://bit.ly/3sHkX3da12340) into Splunk and see what comes up. The result that comes up shows that the link was blocked by the firewall. This means someone likely did try to click the link, which is not great. If we want to be extra sure, we can plug the link into VirusTotal, and it does flag as malicious. Let's classify this as a true positive, considering that the link feels fishy (or ... phishy) and it was likely clicked. However, it requires no further escalation as the issue was blocked at the firewall.
+
+Next, we have Access to Blacklisted External URL Blocked by Firewall. Let's check it out. It shows someone attempting to go to: http://bit.ly/3sHkX3da12340
+Hey! That's the previous link! This is a true positive because we have already confirmed the suspicious nature of the URL, but luckily it was indeed blocked, so no further action is necessary.
+
+Next, we have another Inbound Email Containing Suspicious External Link. This is the contents of that email:
+Hi C.Allen,\n\nWe detected an unusual sign-in attempt on your Microsoft account.\n\nLocation: Lagos, Nigeria\n\nIP Address: 102.89.222.143\n\nDate: 2025-01-24 06:42\n\nIf this was not you, please secure your account immediately to avoid unauthorized access.\n\n<a href="https://m1crosoftsupport.co/login">Review Activity</a>\n\nThank you,\n\nMicrosoft Account Security Team
+https://m1crosoftsupport.co/login... we see right off the bat that this URL is typo-squatted. It is not legitimate. Let's check Splunk to see if it was clicked/allowed. Unfortunately, it looks like this one was allowed. That's a true positive that DOES require escalation to remediate!
+
+And there we go, we have prevented the breach! We got a 100% rate on true and false positives. Good for us!
