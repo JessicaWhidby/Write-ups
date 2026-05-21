@@ -1,0 +1,91 @@
+KC7 already seems cool in that it lists learning objectives at the start of the modules. For this intro lab, those are:
+- How to identify elements of a phishing campaign
+- How to interpret Security Logs to identify evidence of malicious activity
+- How to investigate a basic cybersecurity intrusion
+It also shows that the topics covered are:
+- Reconnaissance
+- Dark-web
+- Phishing
+
+Our first challenge has us learning the background of this whole module, which is that a hacker on the Dark Web is threatening to release information on a "rival" rapper. It simply has us enter the word "darkweb" to move on.
+
+The next one hints to us that we are going to be investigating a phishing campaign. The answer here is simply "lesdoit".
+
+Now, we get into the meat of the challenge. We are told that the adversary may be using IP 18.66.52.227. It then gives us some code to input to resolve this IP adress to a domain name, which will answer our challenge question. This code is:
+PassiveDns
+| where ip == "18.66.52.227"
+And our answer is then: betterlyrics4u.com
+
+Our next challenge has us check email logs for this domain. It gives us another query to run, which initially is just a reconnaissance mission to see what information is contained in the table:
+Email
+| take 10
+We get columns labeled: timestamp, sender, reply_to, recipient, subject, verdict (CLEAN/SUSPICIOUS/BLOCKED), and link.
+Our question is which column would be most likely to contain the domain we're looking for, and that would be LINK.
+
+Our previous query only showed a random 10 emails, hence the "take 10". Now, however, we have a mission: looking for our suspicious domain in the link column. To do this, we have a query stating:
+Email
+| where link has "betterlyrics4u.com"
+It then asks us how many results we get from this query. Above our query results, we see some information. We see Table 1, Search, a time stamp, #13, Hide Empty Columns, and some icons. If we hover over that 13, we see that it is the number of records given from the query we just ran.
+
+Our next task is to find which email address was used to send most of the emails that came from that domain. Simply looking at the table is enough here. We see a large portion of these emails coming from ghostwritersanonymous@protonmail.com.
+
+The next question asks which other email address was used to send these emails, and that answer is wemakebeatz@gmail.com.
+
+Next up, we have to find which role was being targeted the most with these emails. It gives us this query to use:
+let _targets = Email
+| where link has "betterlyrics4u.com"
+| distinct recipient;
+Employees
+| where email_addr in (_targets)
+This is a bit more difficult of a query than we've seen so far, so let's break it down. We are setting a table to show us emails where the link has our suspicious domain and show only the ones with distinct recipients (so no duplicate emails shown). Then, we grab the information from the Employees table, but only for those employees that had their email address in _targets.
+If we scroll almost all the way to the right, we see a column labeled "Role". Almost everyone in this table has the title of Rapper.
+
+The next question has us determine the other role that was targeted, and for this we see the answer is Lead Rapper.
+
+Next up, we scroll back to the left of that last row to determine the name of the Lead Rapper - Dwake Audrey.
+
+Now, we have to find Dwake's IP address. This is just a few columns back to the right - 10.10.0.5.
+
+Now, we are using a new query to find the subject of the email sent to Dwake. This query is:
+Email
+| where link has "betterlyrics4u.com"
+Let's sort this table by recipient in alphabetical order to make this a bit easier. If we were paying attention closely, we saw from previous questions that Dwake's email address is dwake_audrey@owl-records.com, so we need to look for that in this column. The immediate next column to the right is the subject line, which is: [EXTERNAL] RE: Need a ghostwriter for your next hit?
+
+Let's keep scrolling to the right to determine the link included in this email: http://betterlyrics4u.com/share/online/published/enter
+
+Now, we need to know the verdict of this email, and unfortunately, it is listed as CLEAN.
+
+Next, we are shown a screenshot of the email itself. They are asking the name that the adversary signed the email with, and that is GhostWriter.
+
+Now, we have to determine is Dwake actually clicked that malicious link. We are given this information:
+OutboundNetworkEvents have a record of every link that gets clicked on the OWL Record network.
+Knowing this, we can then understand the next query given:
+OutboundNetworkEvents
+| where url == "http://betterlyrics4u.com/share/online/published/enter"
+| where src_ip == "10.10.0.5"
+So we are looking in OutboundNetworkEvents for the URL, and traffic originating from Dwake's IP. This should show us if there was any traffic at all from 10.10.0.5 to the malicious URL.
+Unfortunately, we do get a result. If we expand it via the arrow to the left, we get the exact timestamp (rather than showing what is in the table) as: "timestamp": 2024-04-15T12:03:12.000Z
+
+We now see a screenshot showing the phishing login page and we are asked what the Submit button says: Login to speak with GHOST WRITER.
+
+Now, we need to see if the adversary's actually breached Dwake's account. We are given the query:
+AuthenticationEvents
+| where username == "dwaudrey"
+| where src_ip == "18.66.52.227"
+This tells us we are looking for a potential login event for Dwake that comes from the malicious IP identified earlier (as opposed to Dwake's actual IP). Unfortunately, we do see such an event, and the timestamp we are asked for is: "timestamp": 2024-04-15T13:03:12.000Z
+
+Now, we are asked the result of this attempt, which is shown a few columns to the right: Successful Login
+That's not good!
+
+Now that we know they got access to Dwake's account, we are told (and can assume) the adversary will want to exfiltrate information. We are given the query:
+InboundNetworkEvents
+| where timestamp between (datetime("2024-04-12T00:00:00") .. datetime("2024-05-01T00:00:00"))
+| where url has "dwaudrey" 
+| where src_ip has "18.66.52.227"
+To break this down, we are looking for inbound traffic between a few days before the event to a more recent date. We are looking for any URLs with Dwake's account name, and we are looking for the source to come from the malicious adversary's IP. All of this together would show us any traffic from the attacker to our network where Dwake's information was used for access.
+We run this and we get 10 results.
+
+Now we search in the results to find the name of a ZIP file that was used to gather Dwake's information. If we look at the URL column, we see one result that looks interesting: https://owl-records.com/mail/readmail?user=dwaudrey%40owl-records.com&mailbox_folder=Drafts&download=true&output=DwakesDirtySecrets.zip
+
+And finally, it appears the two rappers have agreed to a truce, so we enter:  less hack more love.
+How sweet!
