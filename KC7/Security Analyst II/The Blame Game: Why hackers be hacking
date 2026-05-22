@@ -1,0 +1,60 @@
+This is another easy one to ease us into more complex challenges.
+Side note after going through this module: It's a lot of reading about different types of hackers and their motivations. There isn't much explanation to do here, since everything is based on the blurbs given. I'm leaving this up to show my progress through the modules, though.
+
+Section 1: Meet the Suspects
+Our introduction to this one is: "In this module, you'll learn to tell four types of threat actors apart, understand why the lines between them blur, and practice applying that framework to real groups you'll actually encounter in the field."
+
+Our first real question is: Which of the following is NOT a primary motivation category used to classify threat actors?
+We were given the list right above, so the answer is "script kiddie".
+
+What does the "P" in APT stand for?
+Persistent
+
+Lazarus Group is described as state-sponsored. Who sponsors them?
+We were given a blurb on them - North Korea
+
+What does RaaS stand for?
+Ransomware as a Service
+
+What is the tactic called where an attacker both encrypts your data AND threatens to publish it?
+Again, we were given some information - double extortion.
+
+More information given, and then: How many days was Colonial Pipeline shut down?
+5
+
+How can insider threats be categorized based on intent?
+Negligent and malicious
+
+Anonymous is described as decentralized. What does that mean in this context?
+They have no central leadership
+
+
+Section 2: Know Your Enemy (more blurbs with comprehension questions)
+Based on the description above, what is the most accurate label for KillNet?
+Hacktivist
+
+What is the term for planting misleading evidence in malware to make it appear to come from a different attacker?
+This one required a bit of research. However, our first result - https://www.huntress.com/cybersecurity-101/topic/what-is-false-flag-in-cybersecurity - tells us the answer is: false flag.
+
+True or false: a defender's primary job during an active incident is to determine which nation-state is responsible.
+As we just read - Your job in most security roles is not to name the attacker. It is to understand what they were after, stop the bleeding, and build defenses that hold regardless of who sent the attack.
+Answer: False
+
+
+Section 3: The Lineup
+This section appears to be giving us descriptions of groups and we have to classify them.
+Which attacker category best describes Volt Typhoon?
+State sponsored actor
+
+Which attacker category best describes Salt Typhoon?
+State sponsored actor
+
+Which attacker category best describes Scattered Spider? (Side note: I used to work on a help desk, so this one was very interesting to read about!)
+Ransomware
+
+Which attacker categories best describes FAMOUS CHOLLIMA?
+State sponsored actor AND insider threat
+
+Which attacker category best describes SiegedSec?
+Hacktivist
+
