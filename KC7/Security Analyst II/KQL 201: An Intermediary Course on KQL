@@ -1,0 +1,308 @@
+This module promises to teach us time analysis, aggregation, data transformation, and advanced filtering.
+
+Section 1: Time-Based Filtering
+How many rows are returned from the query above?
+And the query is:
+ProcessEvents
+| where timestamp > datetime(2024-06-17T14:49:02Z)
+This shows us what happens AFTER a particular event.
+Answer: 382
+
+How many authentication attempts were made on May 1, 2024?
+Let's try something like (given in the previous page):
+AuthenticationEvents
+| where timestamp >= startofday(datetime(2024-05-01))
+| where timestamp < startofday(datetime(2024-05-02))
+This will show us what happened between May 1 at midnight (start of May 1) and before May 2 starts.
+Answer: 673
+
+AuthenticationEvents
+| where timestamp <= endofday(datetime(2024-05-07))
+| where result == "Failed Login"
+This finds all failed logins on or before May 07, 2024. How many rows are returned?
+Answer: 2584
+
+How many login attempts failed on or before June 19, 2024?
+Let's adjust the previous query:
+AuthenticationEvents
+| where timestamp <= endofday(datetime(2024-06-19))
+| where result == "Failed Login"
+Answer: 17884
+
+The next page introduces is to the between clause, which helps filter results, well, between certain timestamps.
+AuthenticationEvents
+| where timestamp between (datetime(2024-05-01) .. datetime(2024-05-07))
+| where result == "Failed Login"
+
+How many login attempts failed between June 1, 2024 and June 7, 2024?
+AuthenticationEvents
+| where timestamp between (datetime(2024-06-01) .. datetime(2024-06-07))
+| where result == "Failed Login"
+That should do the trick. Answer: 2259
+
+The next page introduces us to ago, which can filter based on the current time.
+AuthenticationEvents
+| where timestamp > ago(24h)
+
+And finally, we are introduced to bin, which sorts things and makes it easier to spot anomalies.
+AuthenticationEvents
+| where result == "Failed Login"
+| summarize hourly_failures = count() by bin(timestamp, 1h)
+| order by timestamp asc
+"This groups failed logins into 1-hour buckets. A sudden spike from 5 failures per hour to 500 is a red flag worth investigating."
+On May 12, 2024, which hour saw the most failed logins? (#am or #pm)
+2 PM had 105 total, which is the most by a fair margin.
+
+
+Section 2: Aggregation
+Next, we are given this query:
+AuthenticationEvents
+| where result == "Successful Login"
+| summarize total_logins = count() by src_ip
+And told that, "This groups all successful logins by source IP and counts them. Each row in the result shows one IP and its login count."
+How many unique IP addresses successfully logged in?
+Answer: 641
+
+Which IP had the highest count of observed logins?
+Let's make this a little easier and add a line to the previous query:
+| sort by total_logins desc 
+This will sort with the highest total logins at the top.
+Answer: 10.10.0.10
+
+Then, we are given:
+AuthenticationEvents
+| where result == "Failed Login"
+| summarize failed_attempts = count() by username, src_ip
+This will show failed logins with counts by username AND IP.
+Which IP did the account admiassi_local_admin login from the most?
+Let's add this in:
+| where username == "admiassi_local_admin"
+And the one with 11 is the highest total: 10.10.0.10
+
+Write a query that counts process executions grouped by process name. Use the ProcessEvents table and the process_name field. How many distinct process names are returned?
+We are given:
+ProcessEvent
+| summarize ______ by ______
+Let's fill it in:
+ProcessEvent
+| summarize process_names = count() by process_name
+Answer: 98
+
+How many IP addresses failed to login to more than one account?
+We are given:
+AuthenticationEvents
+| where result == "Failed Login"
+| summarize unique_accounts = dcount(username) by src_ip
+| where unique_accounts > 1
+This introduces dcount, which can count unique values.
+Answer: 6
+
+Which IP was seen successfully logging into the most accounts?
+Let's adjust that pesky "Failed Login" in the prior query to "Successful Login"
+10.10.0.75 logged into 23 accounts.
+
+We are given:
+AuthenticationEvents
+| where timestamp between (datetime(2024-05-01) .. datetime(2024-05-07))
+| where result == "Failed Login"
+| summarize count() by password_hash
+And told that this will count how many times each password was used in failed attempts.
+How many unique passwords were used in failed logins between May 1-7, 2024?
+Answer: 2050
+
+On hostname 48NM-LAPTOP, how many unique passwords were used in failed logins between May 1-7, 2024?
+I added this in before the last line in the prior query:
+| where hostname == "48NM-LAPTOP"
+Answer: 2
+
+We are given this to find which passwords are used most often:
+AuthenticationEvents
+| where timestamp between (datetime(2024-05-01) .. datetime(2024-05-07))
+| where result == "Failed Login"
+| summarize count() by password_hash
+| sort by count_ desc
+| where count_ >= 10
+How many passwords were used 10 or more times?
+Answer: 5
+
+How many passwords were used only once?
+Adjust that where count_ to say == 1
+Answer: 2018
+
+Some passwords are being reused a lot. But here's the key question: are they being used against the same account over and over, or sprayed across many different accounts?
+We are given:
+AuthenticationEvents
+| where timestamp between (datetime(2024-05-01) .. datetime(2024-05-07))
+| where result == "Failed Login"
+| summarize unique_accounts = dcount(username) by password_hash
+| sort by unique_accounts desc
+| where unique_accounts > 10
+And we are told: If the same password is being tried against many different accounts, that's a classic password spray attack.
+
+How many distinct passwords were used against more than 10 accounts?
+Answer: 0
+No password spray detected.
+
+We are then shown how to calculate many things in 1 query:
+AuthenticationEvents
+| where result == "Failed Login"
+| summarize
+    total_attempts = count(),
+    unique_passwords = dcount(password_hash),
+    first_seen = min(timestamp),
+    last_seen = max(timestamp)
+  by src_ip
+
+Write a query that shows for each sender: total emails sent AND the number of unique recipients.
+Who send the sixth most number of emails?
+Ok let's do this:
+Email
+| summarize 
+    total_sent = count(),
+    total_rcps = dcount(recipient)
+  by sender
+| sort by total_sent desc
+Answer: jamie_baydal@jojoshospital.org
+
+When was a "docs.google.com" link first sent by user raul_wilson@jojoshospital.org?
+And we are given:
+Email
+| where link has "docs.google.com"
+| summarize first_seen = min(timestamp), last_seen = max(timestamp) by sender
+Answer: 2024-05-01T07:31:56.000Z
+
+Write a query that shows all encrypted (.encrypted) files on the machine with hostname ENRQ-LAPTOP. The query should show the "first seen" and "last seen" time for each file by its filename. When were all the files encrypted? (copy and paste)
+This should do the trick:
+FileCreationEvents
+| where filename contains ".encrypted"
+| where hostname == "ENRQ-LAPTOP"
+| summarize first_seen = min(timestamp), last_seen = max(timestamp) by filename
+Answer: 2024-06-17T14:49:30.000Z
+
+The make_set() function collects all unique values into a list, instead of just counting them:
+Email
+| where link has "baddomain.com"
+| summarize recipients = make_set(recipient) by subject
+Let's apply this to browsing activity. A bunch of users we seen going to the malicious domain nothing-to-see-here.net. One of them downloaded a suspicious tool from that domain.
+OutboundNetworkEvents
+| where url has  "n_____________"
+| summarize _______(url) by _____
+What was the name of the tool?
+I instead did a little something like this:
+OutboundNetworkEvents
+| where url has "nothing-to-see-here.net"
+| where url has "exe"
+Answer: advanced-ip-scanner.exe
+
+Write a query that shows, for each username, the list of all IP addresses they successfully logged in from, and the count of unique IPs they logged in from. Find the ones that login from more than 5 IPs. How many accounts are logged into from more than 5 IPs?
+We are given:
+AuthenticationEvents
+| where _____ == ______
+| summarize 
+    _______(src_ip),
+    _______(src_ip)
+by username
+| where ______ > 5
+This is what I came up with:
+AuthenticationEvents
+| where result == "Successful Login"
+| summarize 
+    total_ips = dcount(src_ip)
+by username
+| where total_ips > 5
+Answer: 15
+
+The top operator combines sorting and limiting into one step:
+ProcessEvents
+| summarize execution_count = count() by process_name
+| top 10 by execution_count
+This returns the 10 most executed processes.
+What is the name of the fifth most executed process?
+Answer: msedgewebview2.exe
+
+
+Section 3: Data Transformation
+The project operator selects which columns to display:
+AuthenticationEvents
+| take 100
+| where result == "Failed Login"
+| project timestamp, username, src_ip
+You can also rename columns with project:
+AuthenticationEvents
+| take 100
+| project EventTime = timestamp, User = username, SourceIP = src_ip
+The extend operator adds new columns without removing existing ones:
+AuthenticationEvents
+| take 100
+| extend hour_of_day = hourofday(timestamp)
+
+Write a query to find authentication events during off-hours (before 6 AM or after 6 PM). How many authentication events occurred during off-hours?
+We are given:
+AuthenticationEvents
+| extend hour = hourofday(timestamp)
+| where __ < __ or __ >= __
+| count
+This is what I came up with:
+AuthenticationEvents
+| extend hour = hourofday(timestamp)
+| where hour < 6 or hour >= 18
+| count
+(Using military time/24-hour time to get the hour numbers)
+And the answer was 3.
+
+The iff() function adds conditional logic:
+Syntax: iff(condition, value_if_true, value_if_false)
+AuthenticationEvents
+| extend status = iff(result == "Successful Login", "OK", "FAILED")
+For multiple conditions, use case():
+| extend risk = case(
+    attempts > 100, "CRITICAL",
+    attempts > 50, "HIGH",
+    attempts > 10, "MEDIUM",
+    "LOW"
+)
+The last value is the default when no conditions match.
+
+
+Section 4: Advanced Filtering
+The startswith operator finds values that begin with a pattern:
+AuthenticationEvents
+| where src_ip startswith "10.10.1.4"
+How many events originate from IPs starting with 10.10.1.4?
+Answer: 633
+
+The next page shows us the endswith operator, which you can use your context-clues to figure out what that does.
+How many emails were sent with links ending with .docx?
+I came up with:
+Email
+| where link endswith ".docx"
+Answer: 273
+
+The in operator checks if a value matches any item in a list:
+AuthenticationEvents
+| where src_ip in ("10.10.16.14", "10.10.16.7", "10.10.16.24")
+Use !in to exclude values.
+Using the query below as a template, how many unique sender domains were observed that were not one of the following?
+jojoshospital.org
+kentuckypharmasupply.com
+Template:
+Email
+| extend  sender_domain = tostring(split(sender, "@")[-1])
+| where sender_domain
+I wrote out:
+Email
+| extend sender_domain = tostring(split(sender, "@")[-1])
+| where sender_domain !in ("jojoshospital.org", "kentuckypharmasupply.com")
+| distinct sender_domain
+(I couldn't get the syntax right for dcount, but I remembered the distinct operator from prior modules)
+Answer: 10
+
+The has_any operator finds rows containing any term from a list:
+ProcessEvents
+| where process_commandline has_any ("schtasks", "net user", "reg add")
+How many processes contains either "regedit", "spotify", or "cobaltstrike"?
+I ran:
+ProcessEvents
+| where process_commandline has_any ("regedit", "spotify", "cobaltstrike")
+Answer: 6020
+
