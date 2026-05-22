@@ -1,0 +1,134 @@
+We are told that this module teaches accurate interpretation of file metadata, detection ratios, behavioural indicators, network connections, and submission history.
+
+Our learning objectives are:
+- Recognize benign files based off of specific details in the report
+- Become familiar with finding important details in a report
+- Pivot from indicators to learn more about a threat
+- Enable you to expand your knowledge of a threat
+- Understand the significance of Code-Signing Certificates
+- What details about a file can be trusted and which ones should not be
+- How to contribute to the community using the platform
+
+Module 1 is VirusTotal 101. Let's jump in!
+After signing up for a VirusTotal account, we are asked to look up this hash: 60517f898bfac156cd298fd0a45f2e06cecee232a54667213458b99dc8d80de7
+How many detection engines flagged this file?
+0
+
+Who is the distributor of this file?
+We see this towards the top: File distributed by Microsoft
+
+What is the MITRE ATT&CK Technique ID for masquerading?
+According to the source itself - https://attack.mitre.org/techniques/T1036/ - the ID is T1036.
+
+What is the MITRE ATT&CK Technique ID for DLL Search Order Hijacking?
+T1574.001
+
+In 2023, a creator of Voice Over IP (VOIP) phones and software was found to be compromised and used to distribute malicious files. What was the name of the affected company?
+This source - https://www.fortinet.com/blog/threat-research/3cx-desktop-app-compromised - appears to say that the company was 3CX.
+
+What is the file type of this file?
+EXE
+
+The First Submission date is for when the file was first uploaded to VirusTotal. To complete this question, provide the whole timestamp for the First Submission.
+2021-06-18 09:31:41 UTC
+
+Submit the file's creation time to complete this question.
+2040-03-02 02:49:27 UTC
+
+Why might someone have uploaded a legitimate file with a wacky name like that (given as the question AND answer to the previous question in the lab itself)? Enter the name of the technique to complete this question.
+Masquerading
+
+To complete this question, enter the version number of the C/C++ compiler according to the details in the Basic Properties section.
+19.28.29395
+
+Now, we have Section 2: VirusTotal 102.
+Take a look at the first signer of the file with the hash: 4788925332fc6128c895b0e0736a1d7d90e3891f2abb456523cbf0c1ced7d1e2. Does that company make sense to be providing software? To complete this question, enter the name of the first signer for the file hash.
+Heart Craft Brewery s. r. o.
+
+Next, we are given another hash: 549ff37e56d372d076a3d11cd33af660568dc1048b1f4ecce77d8b334582c6c8
+We are asked to determine the first signer.
+Answer: M-Trans Maciej Caban (The dates here don't match up for me, at the time of writing. It appears the correct answer should be Certum Trusted Network CA from 2008, but I went with what KC7 thought was correct).
+
+Next, we are given the hash: a50bcbf0ef744f6b7780685cfd2f41a13be4c921d4b401384efd85c6109d7c00
+One of the YARA rules identified that the file included encrypted content. What is the name of the rule?
+Answer: INDICATOR_EXE_DotNET_Encrypted
+
+What is the popular threat label for a50bcbf0ef744f6b7780685cfd2f41a13be4c921d4b401384efd85c6109d7c00?
+trojan.stealer/msil
+
+According to some of the Contained in Collections groups and the comments, what threat actor used this file?
+JuiceLedger
+
+Now we are looking at: a54ca708c3bbef76dbaec817a9bb36d8b52e492b293d2127cd5be284caabb6d1
+What malware does colinc_sophos claim this file is?
+Batloader
+
+What is the name of the user posting as colinc_sophos?
+Colin Cowie
+
+According to colinc_sophos, how is this malware distributed?
+fake software websites & malvertizing
+
+What is the MITRE ATT&CK technique ID for this technique?
+https://attack.mitre.org/techniques/T1583/008/ - T1583.008
+
+New hash: 0221bf1e1bd171c17527a863531518a95bcc025c87888e66b9512a5651073d16
+Based on the header, someone appears to have uploaded the file with a name that includes the file hash. To complete this question, provide the other file name.
+IRS_form_Package_17-01-2023_19-25-53.exe
+
+Based on the Comments tab for the same file in Question 11, what malware family is this file? Enter the malware family name to complete this question.
+icedid
+
+According to the relations tab, what domain was contacted by this file?
+There are 3 here, but the most commonly contacted one was: plivetrakoy.com
+
+If we look at the Relations tab, we can see a section called Passive DNS Replication. These are the IP addresses that had resolved to the suspicious domain. What IP address resolved to this domain on the date closest to when the file was submitted to VirusTotal?
+I see no Passive DNS Replication section, so let's try this another way. Under contacted IP addresses, I picked the one with the highest "Autonomous System" count: 193.149.180.175
+
+While on the VirusTotal page for the domain, we can look at the Communicating Files section on the Relations tab. What is the general disposition of the files? Answer with one of the following: The files look OK , Mixed Results, or All bad
+I also don't see a Communicating Files section. However, I do see BUNDLED files and there 0 detections for any of them. But let's think critically here: we're investigating a malware hash. The answer is probably "All bad".
+
+We also see a section called Execution Parents. What is the name of this file’s execution parent?
+IRS_form_Package_17-01-2023_19-25-53 (1).zip
+
+If we click the file name of the execution parent, we can pivot to that file. This file is a ZIP file. To complete this question, provide the SHA-1 hash for the ZIP file.
+85d1e350486fea5945f46842685f248340fbf7dc
+
+New hash: 2bf0a64fe7aea262c96fc7d52b1e28486ff607caa9513fd88583e19454f9c500
+What is the status of the certificate of this file?
+revoked
+
+What is the Creation Time for this file?
+1992-06-19 22:22:17 UTC
+
+What is the name of the compiler of this file?
+This took some research. Going to this resource - https://unit42.paloaltonetworks.com/unit42-recent-inpage-exploits-lead-multiple-malware-families/ - I found the answer to be Delphi.
+
+A user reported a command-and-control (C2) server in the comments section. If we look, we won't see this C2 IP address in the relations tab. What is the name of the DLL file which was observed connecting to this IP address on 2025-02-12?
+The URL provided is 146.70.161.126. We can also put this into the search bar of VirusTotal. Go to the Relations tab, and we see 2 files with that timestamp; however, only one is a DLL: WABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZoYDHNFTTPDJL50NWXNEWCHBUDCPJOeEZNbd
+
+Back to 2bf0a64fe7aea262c96fc7d52b1e28486ff607caa9513fd88583e19454f9c500 and the Behavior tab. What is the file's size?
+This is found up top in the summary pane: 301.35 MB
+
+A deflated copy of this file was uploaded to VirusTotal: 71d5a558096b640366dbc711ef2870c0269b4138352bb98da0be30d9b6d6bb9b. What is the size of the deflated file?
+2.52 MB
+
+Back to 2bf0a64fe7aea262c96fc7d52b1e28486ff607caa9513fd88583e19454f9c500. To complete this question, provide the full filepath. (Note: leave the filename off as it may change if this file is re-analyzed.)
+That's usually in the Startup folder: C:\Users\<USER>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+However, that doesn't work because <USER> is technically invalid. Let's try: %APPDATA%\microsoft\windows\start menu\programs\startup\
+
+The registry hive modified by the malware is abbreviated HKCU. What is the full name of the registry hive?
+HKEY_CURRENT_USER
+
+One of the keys contains the path shell\open\command. What program will the registry key execute when called? This is the first word written to the registry key.
+Expand that line: powershell 
+
+A lot of content was written to the registry key including something about Cryptography? What type of encryption algorithm is mentioned and used by the registry key?
+powershell -command "$A=New-Object System.Security.Cryptography.AesCryptoServiceProvider;$A.Key=@([byte]125,100,81,66,148,128,244,47,37,69,113,105,136,2,97,123,150,240,16,219,189,26,225,83,17,191,185,169,90,13,162,42);$A.IV=@
+Answer: aes
+
+Child Processes are indicated here with an arrow curving to the right. What is the child process of our file?
+First result we see is:
+5852 - "C:\Users\<USER>\Desktop\executable.exe"
+ 5788 - "C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe" -ep bypass -windowstyle hidden -file "C:\Users\<USER>\AppData\Local\Temp\50v6evalg5kp9ro0g7nnp3anh2dkuwbe.ps1"
+So powershell.exe is our answer.
