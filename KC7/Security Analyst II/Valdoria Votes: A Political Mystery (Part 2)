@@ -1,0 +1,314 @@
+Back to Valdoria, we go!
+
+
+Section 1: What's a Query?
+What is the name of the Deputy Commissioner?
+And we are given:
+Employees
+| where role == "Deputy Commissioner"
+Answer: Hilary Binton
+
+What is Dora Thomas' role?
+Given:
+Employees
+| where name == "Dora Thomas"
+Answer: Polling Station Supervisor
+
+What is this supervisor's name?
+Given:
+Employees
+| where role contains "supervisor"
+If we scroll to the bottom, we find the title: Temp Election Support Staff Supervisor
+Answer: Barry Schmelly
+
+What is Barry Schmelly's IP address?
+We can use the previous query or the one given:
+Employees
+| where name == "Barry Schmelly"
+Answer: 10.10.0.12
+
+What is Barry Schmelly's hostname?
+Same deal.
+Answer: GCH3-DESKTOP
+
+What is Barry Schmelly's email address?
+Answer: barry_schmelly@valdoriavotes.gov
+
+How many emails did Barry Schmelly receive?
+Given:
+Email
+|where recipient ==  "barry_schmelly@valdoriavotes.gov"
+| count
+Answer: 37
+
+How many distinct commands were run on Barry Schmelly's machine?
+Given:
+ProcessEvents
+| where hostname == "GCH3-DESKTOP"
+| distinct process_commandline
+Answer: 173
+
+How many distinct URLs did employees with the first name William visit?
+Given:
+let wills_ips =
+Employees
+| where name has "William"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (wills_ips)
+| distinct url
+To explain a bit, this query will create a variable called wills_ips. What goes in that variable will be the output from the next clause: distinct IP addresses for Employees with the name William. Then, we'll take that information, go to the OutboundNetworkEvents table, plug in those IPs as the source IPs (so: traffic from the internal network on those particular IPs to the outside world), and then tell us the unique URLs that were visited.
+Answer: 217
+
+How many authentication attempts did we see to the accounts of employees with the first name William?
+Given:
+let w_username = Employees
+|where name has "William"
+|distinct username;
+AuthenticationEvents
+| where username in (w_username)
+Answer: 183
+
+
+Section 2: All About the Dataz
+Which table would tell us if Barry Schmelly received a suspicious email?
+Email
+
+Which table would tell us if he went to his bank website to see how much money he had?
+OutboundNetworkEvents
+
+Which table would tell us if Barry Schmelly saved a malicious file on his computer?
+FileCreationEvents
+
+Which table would tell us if Barry Schmelly opened that malicious file that was saved on his computer?
+ProcessEvents
+
+Which table would you look in to see if that malicious file was detected on Barry Schmelly's machine?
+SecurityAlerts
+
+
+Section 3: A Vote of No Confidence
+What IP address did they forget to hide in the poster?
+This was just on the image before.
+Answer: 55.49.227.170
+
+Is there any evidence of traffic from this IP address to our network? (yes/no)
+This query should do the trick:
+InboundNetworkEvents
+| where src_ip == "55.49.227.170"
+Answer: no
+
+How many domains resolved to the IP 55.49.**.***?
+This one uses PassiveDns.
+PassiveDns
+| where ip contains "55.49."
+Answer: 2
+
+What is the Valdoria related domain resolving to that IP?
+Same query results: valdoriavotesgov.com
+
+What is the legitimate domain for the Valdoria Elections Board?
+Answer: valdoriavotes.gov
+
+How many IP addresses did the fraudulent Valdoria government domain resolve to?
+This query should look up that fraudulent odmain and resolve the IPs associated with it.
+PassiveDns
+| where domain == "valdoriavotesgov.com"
+Answer: 3
+
+Let’s check if there’s any browsing activity from these IPs to our network. Which table should we be looking at for records of that kind of activity again?
+InboundNetworkEvents
+
+How many requests do we see to our network from those IPs?
+Given:
+let ips = PassiveDns
+| where domain == "valdoriavotesgov.com"
+| distinct ip;
+InboundNetworkEvents
+| where src_ip  in (ips)
+This will set a variable for unique IPs associated with the suspicious domain. Then, it will take those IPs and look for inbound (into our network) connections.
+Answer: 26
+
+It looks like the actor started with researching employees at the Elections Board. Which phase of the Cyber Kill Chain is this called?
+Reconnaissance
+
+In the first record we have of their activity, the hackers seemed focused on learning more about a certain group at the Valdoria Board of Elections. What group were they specifically interested in?
+The same query gives us the answer; just look at the first result: new hires
+
+What specific area of our prevention measures were the threat actors interested in?
+Same results show that they are searching for election interference protection measures. Seems to me like they're trying to interfere themselves!
+
+What important machines were the hackers trying to get into? (two words)
+Also from the prior query: voting machines
+
+Which document were the hackers looking for? (two words)
+Answer: Technical manual
+Getting more and more suspicious! They're looking into our network, wanting to breach our voting machines, and looking at the technical documents, probably to see where weaknesses may be.
+
+There was a suspicious-looking Valdoria domain registered by the adversaries. Let’s check if there’s any traffic to it—has any of our employees visited that domain for any reason? (yes/no)
+This query should do the trick:
+OutboundNetworkEvents
+| where url contains "valdoriavotesgov"
+Answer: yes
+
+When did someone first browse to that domain?(paste the full timestamp)
+Answer: 2024-10-07T10:46:45.000Z
+
+Did anyone enter their credentials on that phishing page ? (yes/no)
+Our second result from the prior query shows the URL visited: https://valdoriavotesgov.com/login?username=ansnooper&password=**********
+Answer: yes
+
+When did they enter their credentials into that page? (paste the full timestamp)
+Answer: 2024-10-07T10:46:47.000Z
+
+What is the username of the employee that entered their credentials on that phishing page?
+Answer: ansnooper
+
+What is the name of the employee who entered their credentials?
+Let's try:
+Employees
+| where username == "ansnooper"
+Answer: Anderson Snooper
+
+What is Snooper's role?
+Answer: Temp Election Support Staff Lead
+
+Did Snooper have Multiple Factor Authentication enabled (yes/no)
+His mfa_enabled column says False... not good. 
+
+Thanks to that slip-up, the threat actor managed to log into Snooper's account. What table would we find this logon activity in?
+AuthenticationEvents
+
+When did the threat actor login to Snooper's account?
+Given:
+AuthenticationEvents
+| where username == "ansnooper"
+| where timestamp between(datetime(2024-10-05T10:46:47Z) .. datetime(2024-10-11T10:46:47Z))
+Let's add in a clause to filter only successful attempts:
+| where result contains "Success"
+Answer: 2024-10-07T15:46:45.000Z
+
+
+Section 4: Snooping Around
+What is Anderson Snooper’s email address?
+Let's run this to get the answer:
+Employees
+| where name == "Anderson Snooper"
+Answer: anderson_snooper@valdoriavotes.gov
+
+On October 8th, 'Snooper' had an interesting email conversation that’s worth investigating. Given the timing, it's likely that the threat actor was using his account after they compromised it. What is the email address of the person he was conversing with?
+I came up with:
+Email
+| where sender == "anderson_snooper@valdoriavotes.gov"
+| where timestamp between (datetime(2024-10-08T00:00:00.000Z) .. datetime(2024-10-09T00:00:00.000Z))
+This will lookin email logs for Anderson sending emails to someone else between midnight on Oct 8 and midnight on Oct 9. We get 4 emails, all conversing with: barry_schmelly@valdoriavotes.gov
+
+What is Schmelly's job role?
+Let's go back to the Employee table:
+Employees
+| where name == "Barry Schmelly"
+Answer: Temp Election Support Staff Supervisor
+
+"Snooper" was observed asking Schmelly how one might gain access to what devices?
+Back to the Email query, we see a subject of: How would one (theoretically) access the voting machines? Can you help?
+
+Schmelly claims he does not know how to access the devices. However, 'Snooper' insists he needs them to accomplish a specific task. What is it? (four words)
+Another subject line we see is: Really??? I need to access them to uhh.... do my job though
+
+Schmelly mentions that there's a special system that might be useful to "Snooper". What system did Schmelly mention?
+Let's adjust the previous query to search for Barry as the sender and see what comes up:
+I heard people talking about an AI system that might help. We (temp staff) can't access it though.
+
+What is Snooper's IP address?
+Let's go back to:
+Employees
+| where name == "Anderson Snooper"
+Answer: 10.10.0.4
+
+Using Snooper's IP address, let's check his activity in InboundNetworkEvents. What term appeared at the end of each url that Snooper guessed?
+This is what I came up with:
+InboundNetworkEvents
+| where timestamp > datetime(2024-10-07T15:46:45.000Z)
+| where src_ip == "10.10.0.4"
+Answer: model=gpt-4o
+
+What was the first subdomain that Snooper guessed?
+https://ai.valdoriavotes.gov/?model=gpt-4o
+So: ai
+
+What status code was returned for Snooper's unsuccessful guesses?
+Just to the right, we see: 404
+
+What was the nursery rhyme-related subdomain that Snooper guessed?
+Answer: ol-mcdonald-had-a-farm-ai-ai-oh
+
+What was the basketball player-related subdomain that Snooper guessed?
+Answer: allen-iverson
+
+What was the first subdomain "Snooper" guessed that returned a 200 status code?
+Let's add this to the query:
+| where status_code == "200"
+Answer:elections-chatbot
+
+How many questions did they ask the chatbot?
+Other than the original URL, there are 6 others... so 6
+
+By checking the AIPrompts table, we can find out what response the AI chatbot gave. Which conversation_id is associated with the question about voting machines?
+I tried this out:
+AIPrompts
+| where prompt contains "voting machines"
+And got: 94bd6162-1323-402d-bccd-8fceaee5f230
+
+The AI bot told the threat actor to bring a _ and a banana.
+Change up the previous query to look for responses instead:
+AIPrompts
+| where response contains "banana"
+Answer: flashlight
+
+According to the bot, the voting machines are not actually connected to the internet. Instead, votes are manually calculated using a ___.
+Adjust once more:
+AIPrompts
+| where response contains "internet"
+Answer: calculator
+
+The AI chatbot suggests they might have better luck getting information about the voting machines from the vendor who makes them. What is the name of the vendor?
+Adjusted again:
+AIPrompts
+| where response contains "vendor"
+Answer: Dominos Voting Systems
+
+What job role will the vendor talk to?
+Same result as the previous query.
+Answer: Election Commissioner
+
+What is the name of the employee with that job role?
+Answer: Arrack Bobama
+(For future reference, his username is arbobama and his email  is arrack_bobama@valdoriavotes.gov)
+
+Section 5: Look on My [Security], Ye Mighty, and Despair!
+Following the password reset, the threat actors logged into Bobama's account. When did they log in to Bobama's account?
+I did this:
+AuthenticationEvents
+| where username == "arbobama"
+| where timestamp > datetime(2024-10-15T00:00:00.000Z)
+| where result contains "Successful"
+To look for successful authentications to arbobama after the date (at midnight) of the help desk call (shown in the previous page's screenshot). 
+Answer: 2024-10-16T00:00:00.000Z
+
+What IP address did the threat actors use to log in to that account?
+Answer: 214.85.104.248
+
+The threat actors (using Bobama's account) were later observed sending an email to the voting machine vendor. What email address did they send this email to?
+This is what I came up with:
+Email
+| where sender == "arrack_bobama@valdoriavotes.gov"
+| where recipient contains "dominos"
+This will check email logs for Arrack sending to any email addresses containing the phrase "dominos" (remember that that is the name of the vendor).
+Answer: help@dominosvotingsystems.com
+
+What PDF did the threat actors receive that might be useful to them later?
+Flip around the previous query:
+Email
+| where recipient == "arrack_bobama@valdoriavotes.gov"
+| where sender contains "dominos"
+And one result shows an attachment called: ValdoriaVotingMachinesNetworkGuide.pdf
