@@ -1,5 +1,5 @@
 OBJECTIVE
-My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Splunk.
+My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Wazuh.
 
 TOOLS USED
 VMWare
@@ -15,6 +15,7 @@ I learned how to:
 Setup a network
 Setup an AD domain and add users and computers
 Scan the new network with nmap/Zenmap
+Run a vulnerability scan with Wazuh (along with all of the install issues I had to correct)
 
 This is an excellent learning experience, and I hope to continue to build on it in the future. I am sure that the skills I have developed here will translate well into a professional environment.
 
