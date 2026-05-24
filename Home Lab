@@ -3,9 +3,12 @@ My goal here is to learn more about how to practically apply the tools and knowl
 
 TOOLS USED
 VMWare
-Kali Linux, Windows 10, Windows Server 2022
-Splunk for alerts and investigations
+Kali Linux, Windows 10, Windows Server 2022, Ubuntu
 Zenmap for network discovery and diagramming
+Wazuh for vulnerability scanning
+
+Tools to be used:
+Splunk for alerts and investigations
 WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
 
 KEY TAKEAWAYS
@@ -13,7 +16,7 @@ I learned how to:
 Setup a network
 Setup an AD domain and add users and computers
 Scan the new network with nmap/Zenmap
-Scan for vulnerabilities
+
 This is an excellent learning experience, and I hope to continue to build on it in the future. I am sure that the skills I have developed here will translate well into a professional environment.
 
 SETUP
@@ -29,10 +32,32 @@ From there, I have to make sure the AD domain is discoverable on Kali:
 sudo realm discover [domain]
 And then it's as easy as:
 sudo realm join --user=[domain admin account] [domain]
+Ubuntu will largely follow a similar process, and this will be used for our Wazuh server.
 And there we go! Now we're ready to play around with the fun stuff!
+
 
 FIRST PROJECT
 To start with, I figured I would login to Kali with my fancy new AD credentials (username@DOMAIN.EXAMPLE in the username field) and try to get a network map with Zenmap. I used the default nmap -A -T4 scan, with the network info added in to the end of the command. I won't show the image here, but I will say it successfully found both other hosts (the server and the Windows 10 machine), identified open ports, and identified the OS (within reasonable margin of error). It gives a nice rundown of everything it finds under Host Details of each host (which can be found on the left pane). Overall, very neat way to map my own network and see what it's got going on. It will likely be a big help in future projects to be able to refer back to this topology.
 
 SECOND PROJECT
-
+I followed Wazuh's Quickstart guide to get it installed and going, found here - https://documentation.wazuh.com/current/quickstart.html.
+I will use this to scan all 3 VMs. I don't expect to see a ton of vulnerabilities considering this is a home lab and I did not install intentionally vulnerable machines (yet), but it will be good practice either way.
+I first installed it on my Ubuntu VM. I did run into some errors on the Filebeat installation portion, so I had to run these to remove everything and start fresh with the install, manually grabbing the GPG key along the way:
+sudo rm -rf /var/lib/dpkg/info/wazuh-manager.*
+sudo apt-get remove --purge wazuh-manager -y
+sudo apt-get autoremove -y
+sudo apt-get clean
+sudo apt-get install gnupg apt-transport-https -y
+curl -s https://packages.wazuh.com/key/GPG-KEY-WAZUH | sudo gpg --no-default-keyring --keyring gnupg-ring:/usr/share/keyrings/wazuh.gpg --import
+sudo chmod 644 /usr/share/keyrings/wazuh.gpg
+sudo rm -rf /var/lib/dpkg/lock-frontend
+sudo rm -rf /var/lib/dpkg/lock
+sudo dpkg --configure -a
+Then, right back to: curl -sO https://packages.wazuh.com/4.14/wazuh-install.sh && sudo bash ./wazuh-install.sh -a
+I then got some errors that necessary ports were already being used. Makes sense, that's still connected to previously attempted install. Let me use: lsof -i :[port] for those to find the process ID, then sudo kill -9 [PID].
+NOW let's try installing again. Unfortunately, I got another error installing the dashboard. I ran sudo cat /var/log/wazuh-install.log. I found that I don't have enough free space in /var/cache/apt/archives/. I ran:
+sudo apt-get clean
+sudo apt-get autoclean
+sudo apt-get autoremove
+Then I uninstalled with: sudo bash wazuh-install.sh --uninstall. I re-ran the commands above, as well.
+Let's try the install again now.
