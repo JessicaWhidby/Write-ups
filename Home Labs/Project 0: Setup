@@ -1,0 +1,35 @@
+OBJECTIVE
+My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Splunk.
+
+TOOLS USED
+VMWare
+Kali Linux, Windows 10, Windows Server 2022, Ubuntu
+Zenmap for network discovery and diagramming
+Wazuh for vulnerability scanning and alerts
+
+Tools to be used:
+WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
+
+KEY TAKEAWAYS
+I learned how to:
+Setup a network
+Setup an AD domain and add users and computers
+Scan the new network with nmap/Zenmap
+
+This is an excellent learning experience, and I hope to continue to build on it in the future. I am sure that the skills I have developed here will translate well into a professional environment.
+
+SETUP
+First I had to get all my virtual machines installed and ready before I could use them to practice. I also set easily recognizable names for each VM so I could easily tell them apart if I'm connecting from one to the other. I then put them all on 1 virtual network, with the Server VM having a second NIC for NAT with the host, as well. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example. It just makes things a lot easier.
+After installing all of the OSs, I had to set up the Server VM with Active Directory, DHCP, and DNS so I can add all of the computers to a domain. In Server Manager, I went to Add Roles & Features, Role-based or feature-based installation, Active Directory Domain Services. Once the features are installed, I need to click to promote the server to domain controller. I'll explain configurations for everything else when we get there.
+I did run into an error promoting the server, which was that the Admin password was weak. No worries, I just opened up CMD as Administrator, ran "net user Administrator [password]", and we were all good. Once that was complete, I went into Active Directory Users & Computers and set up a few accounts, just so I can have something to play around with later.
+I also got a warning that the server didn't have a static IP, so I went into Settings > Ethernet > IP assignment > Edit and gave it an easy to remember (for me) IP and subnet mask. I pointed the gateway/preferred DNS to itself. For DHCP configuration, I pointed it to my admin credentials (which I set up a new user for, rather than the default Admin account). Then I went back into DHCP, IPv4, and set up a new scope. I gave it an easy range, set the router IP to the static IP for the server, and activated.
+For Remote Access, I installed Routing and Direct Access. From there, I opened the Routing and Remote Access tool menu, selected NAT, and then pointed it to the externally-facing NIC. The internal NIC is strictly to connect with the client VMs, the external one controls access to the outside world.
+And with all that being done, it's time to add Kali and Windows 10 to the domain! In Windows, it's relatively easy. First, I have to go into the Network Settings and set the DNS server to the IP of the Server machine. From there, it's as easy as going into the Settings, going to Account settings, Access work or school, Connect, join to a local AD domain, and adding it to the domain. I had to input credentials of a domain admin to allow it on the domain, and voila, now we have a domain!
+Now for the tricky part - we have to get Kali on the domain. It's not that much more difficult than adding a Windows machine to the domain, but it is a bit more involved. First, I had to update/upgrade the system and set the DNS to the domain controller again. Then, I had to install a bunch of things that would allow me to join Kali to the domain. For simplicity, here is a command that does all of them:
+sudo apt -y install realmd libnss-sss libpam-sss sssd sssd-tools adcli samba-common-bin oddjob oddjob-mkhomedir packagekit
+From there, I have to make sure the AD domain is discoverable on Kali:
+sudo realm discover [domain]
+And then it's as easy as:
+sudo realm join --user=[domain admin account] [domain]
+Ubuntu will largely follow a similar process, and this will be used for our Wazuh server.
+And there we go! Now we're ready to play around with the fun stuff!
