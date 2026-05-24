@@ -5,10 +5,9 @@ TOOLS USED
 VMWare
 Kali Linux, Windows 10, Windows Server 2022, Ubuntu
 Zenmap for network discovery and diagramming
-Wazuh for vulnerability scanning
+Wazuh for vulnerability scanning and alerts
 
 Tools to be used:
-Splunk for alerts and investigations
 WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
 
 KEY TAKEAWAYS
@@ -80,4 +79,4 @@ And then this one to confirm the update: weasyprint --info
 Unfortunately, it still says version 67. I think Kali just can't find the upgraded version either way, and I'm not sure I've ever really needed it on this machine, so let's see if we can uninstall it.
 sudo apt remove weasyprint
 Then, re-run weasyprint --info, and it confirms that it's gone. Let's restart Wazuh's service and see if it still finds the vulnerability. As of now, it still does, but it may just need some time to register that it's uninstalled on the target machine.
-Let's go to the Windows machine and install the Wazuh agent there.
+Let's go to the Windows machine and install the Wazuh agent there. I know this one hasn't seen Windows Update yet, so there's probably going to be a fair few vulnerabilities here.
