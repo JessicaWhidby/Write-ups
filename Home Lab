@@ -60,4 +60,6 @@ sudo apt-get clean
 sudo apt-get autoclean
 sudo apt-get autoremove
 Then I uninstalled with: sudo bash wazuh-install.sh --uninstall. I re-ran the commands above, as well.
-Let's try the install again now.
+I tried again, and after all of this, I figure out: my disk is too small. Let's increase it in VMWare, which is a matter of going into the settings. Then, I followed this tutorial to expand it within the guest OS - https://forum.cloudron.io/topic/6086/ubuntu-20-04-how-to-extend-partition-for-noobs/2
+After all that, it glitched anyway (or, admittedly, I probably entered a command incorrectly and caused it to mess up) and I had to reinstall the VM entirely. Let's see if it works on a brand new install with bigger disk space naturally.
+Nope! This time I'm told that the backup could not be created. My next task, when I'm able to come back, will be troubleshooting that and seeing if I can (finally) get Wazuh going.
