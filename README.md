@@ -1,4 +1,4 @@
-# CTF-Write-ups
+# Write-ups
 OBJECTIVE -
 I've been learning a lot through the use of online red and blue team labs, as well as setting up and using my own home lab. My goal is to learn new tools, deepen my understanding of others, and generally learn investigations.
 
