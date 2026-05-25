@@ -15,6 +15,7 @@ VirusTotal</br>
 Linux command line</br>
 Ubuntu, Kali, Windows Server, and Windows 10 VMs
 
+First, I'll discuss my home lab setup and practice. I have Kali, Ubuntu, Windows Server, and Windows 10 installed. I have them all on 1 virtual network, and Server is acting as an AD domain controller and DNS/DHCP/Remote access server. I added everything else to the AD domain and was able to sign in with the AD credentials. Once my network was going, I went to Kali and created a network map with Zenmap. Then, I set up Ubuntu as a Wazuh server and am in the process of running vulnerability scans on each host and remediating findings.
 
 Through Blue Team Labs Online (BTLO), I've learned to develop my defensive and investigative skills. I've learned how to explore VirusTotal to get a closer look at potential malware and brush up on open source intelligence (OSINT) digging. I've also learned to explore metadata, how to utilize Wireshark in new and different ways, how to analyze a phishing attempt via email header information, and dabbled in reading log files via Linux command line. Finally (so far), I learned how to read reports and parse for important information.
 
@@ -25,5 +26,3 @@ KC7 has been one of my favorite platforms, as the gameification walks you throug
 LetsDefend also showed me more about phishing emails, and I'd like to explore the platform even further.
 
 TryHackMe is one of the more popular platforms I have used. I also did an introduction to phishing there, this time using Splunk SIEM and triaging alerts as they came in. I also ran through a forensic investigation with Autopsy. Finally (thus far), I went through their Juicy Details CTF. This required lots of log analysis with a basic text editor to open the logs.
-
-Finally, I'll discuss my home lab setup and practice. I have Kali, Ubuntu, Windows Server, and Windows 10 installed. I have them all on 1 virtual network, and Server is acting as an AD domain controller and DNS/DHCP/Remote access server. I added everything else to the AD domain and was able to sign in with the AD credentials. Once my network was going, I went to Kali and created a network map with Zenmap. Then, I set up Ubuntu as a Wazuh server and am in the process of running vulnerability scans on each host and remediating findings.
