@@ -2,14 +2,17 @@
 OBJECTIVE -
 I've been learning a lot through the use of online red and blue team labs, as well as setting up and using my own home lab. My goal is to learn new tools, deepen my understanding of others, and generally learn investigations.
 
-TOOLS USED -
-Online gamified learning platforms</br> Wazuh, Volatility, KQL/Azure Data Explorer
-Splunk
-Wireshark
-Zenmap
-Autopsy
-VirusTotal
-Linux command line
+TOOLS USED -</br>
+Online gamified learning platforms</br>
+Wazuh</br>
+Volatility</br>
+KQL/Azure Data Explorer</br>
+Splunk</br>
+Wireshark</br>
+Zenmap</br>
+Autopsy</br>
+VirusTotal</br>
+Linux command line</br>
 Ubuntu, Kali, Windows Server, and Windows 10 VMs
 
 
