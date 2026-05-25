@@ -28,7 +28,7 @@ So luckily, admin is an invalid user. Therefore, the answer is 1:sophia.
 How many times did the attacker login to these accounts?
 For this one, I kept using grep, but with a pipe.
 
-grep "sophia" '/home/jessi/Downloads/sshlog.log' | grep "authenticated"
+grep "sophia" '/home/[user]/Downloads/sshlog.log' | grep "authenticated"
 
 This will search for the sophia username, and then search that output again and show me the lines where she was successfully authenticated (AKA logged in).
 
@@ -42,7 +42,7 @@ Answer: 2
 When was the first request from the attacker recorded?
 Let's try this command on for size:
 
-grep "Connection from" '/home/jessi/Downloads/sshlog.log' | head
+grep "Connection from" '/home/[user]/Downloads/sshlog.log' | head
 
 The "head" at the end will show us just the first 10, so we can easily see the first one instead of scrolling back up for who knows how long.
 This is the output:
