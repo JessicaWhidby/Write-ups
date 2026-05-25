@@ -3,10 +3,7 @@ OBJECTIVE -
 I've been learning a lot through the use of online red and blue team labs, as well as setting up and using my own home lab. My goal is to learn new tools, deepen my understanding of others, and generally learn investigations.
 
 TOOLS USED -
-Online gamified learning platforms
-Wazuh
-Volatility
-KQL/Azure Data Explorer
+Online gamified learning platforms</br> Wazuh, Volatility, KQL/Azure Data Explorer
 Splunk
 Wireshark
 Zenmap
