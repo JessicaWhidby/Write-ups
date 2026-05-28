@@ -236,7 +236,144 @@ Answer: Jason Chen
 
 Use leftanti to find employees who received the phishing email (from noreply@whiskersandwonders-hr.com) but did NOT click.
 How many emails were received where the recipients did not click the link?
-[To be continued]
+If we do this:
+Email
+| where sender has_any ("whiskersandwonders-hr", "api-sync-updates", "update-cdn-service")
+| where links has_any ("api-sync-updates", "update-cdn-service.xyz")
+The result is 9. If we add:
+| mv-expand links to typeof(string)
+| join kind=leftanti (
+    ProxyEvents
+) on $left.links == $right.url
+The result is 4. So logic says the answer should be 5. But it's 6. Honestly, can't tell you why.
+
+Anyway, the next page tells us: The leftsemi join is a filter. It returns left rows that have at least one match in the right table, but doesn't add right columns. Then we get:
+Employees
+| join kind=leftsemi (
+    Email
+    | where links has "update-cdn-service.xyz"
+) on $left.email_addr == $right.recipient
+This will go to Employees, return things that match the email link, and tell the database that email_addr from Employees is the same as recipient from Email.
+Or, as they put it: This returns employee records for everyone who received a phishing email, with only the Employees columns. Similar to let + in, but with full join syntax flexibility.
+
+Use leftsemi to get full employee records for everyone who clicked the phishing link. What roles do the clickers belong to? (List all of them)
+Using the query above: Adoption Coordinator, Development Officer
 
 
+Section 4: Text Processing
+Next, we are taught about parsing. It gives us this:
+ProxyEvents
+| take 100
+| parse url with "https://" domain "/" *
+And tells us:
+This extracts the domain from a URL:
+Look for the literal text "https://"
+Capture everything until the next "/" into a new column called domain
+Ignore the rest (*)
+Then we are told:
+The Employees table has an email_addr column with values like diego_hernandez@whiskersandwonders.org.
+Write a query that:
+Parses the email address to extract the username (the part before the @)
+Projects just the name and username columns
+And then asked: How many characters are in the longest email address username?
+So our query should look something like:
+Employees
+| parse email_addr with user "@" domain "." *
+| project name, user
+Just eyeballing it, it looks like this is the longest username: jasmine_rodriguez
+So: 17
 
+Then, we are told about split(). We are given:
+Employees
+| extend parts = split(email_addr, "@")
+| extend username = parts[0]
+| extend domain = parts[1]
+And told: This splits alice@company.com into ["alice", "company.com"], then extracts each part by index.
+What is the first filename created on pawilson's machine?
+And we are given the template:
+FileCreationEvents
+| where username == 'pawilson'
+| extend parts = // your code here
+| extend filename = // your code here
+Here's what I came up with:
+FileCreationEvents
+| where username == 'pawilson'
+| extend parts = split(path, "\\") // Double slash to escape the character
+| extend filename = parts[-1] //I know how to use -1 in an array from prior programming knowledge
+And survey says: spotify.exe
+
+What domain sent the most emails?
+Given:
+Email
+| extend sender_domain = split(sender, "@")[1]
+| summarize count() by tostring(sender_domain)
+| sort by count_ desc
+Answer: whiskersandwonders.org
+
+Use parse to extract domains from URLs in ProxyEvents. How many unique domains were visited?
+Honestly, you could just:
+ProxyEvents
+| distinct domain
+Answer: 488
+But if you want to do what they asked:
+ProxyEvents
+| extend domain == parse_url("\\")
+| summarize count() by tostring(domain)
+| distinct domain
+
+
+Section 5: Final Investigation
+Find all employees who received the phishing email from noreply@whiskersandwonders-hr.com with their names and roles. How many unique employees received the phishing email?
+I did:
+Email
+| where sender == "noreply@whiskersandwonders-hr.com"
+| join kind=leftouter Employees on $left.recipient ==$right.email_addr
+| distinct recipient
+And it gave me 3 results.
+
+Join phishing emails with click events to find who clicked. What percentage of emails resulted in a click? (Round to nearest whole number)
+First, let's take a step back:
+Email
+| where sender == "noreply@whiskersandwonders-hr.com"
+This returns 9 emails. There are 9 emails total.
+Then:
+let recpt=
+Email
+| where sender == "noreply@whiskersandwonders-hr.com"
+| join kind=leftouter Employees on $left.recipient ==$right.email_addr
+| project ip_addr;
+ProxyEvents
+| where src_ip in (recpt)
+| distinct src_ip
+Answer here is 3. So the overall answer is 33%.
+
+Find evidence of ongoing C2 communication from compromised workstations. How many accounts appear to be compromised?
+This got me the answer:
+Email
+| where sender == "noreply@whiskersandwonders-hr.com"
+| join kind=leftouter Employees on $left.recipient ==$right.email_addr
+| project ip_addr, username
+| distinct username
+Answer: 3
+
+Identify the latest C2 communication. What is this type of activity called?
+Answer: Beaconing
+
+Use union to build a complete timeline from first phishing email to last C2 beacon. How many minutes passed between the first phishing email and the attacker's last action?
+Not going to lie to you, I needed some help here, but this is what I got:
+let phishing_email =
+Email
+| where sender has "noreply@whiskersandwonders-hr.com"
+| project timestamp;
+let attacker_activity =
+union
+(
+    ProxyEvents
+    | where url has_any ("api-sync-updates.top", "update-cdn-service.xyz")
+    | project timestamp
+);
+union phishing_email, attacker_activity
+| summarize first_seen=min(timestamp), last_seen=max(timestamp)
+| extend minutes_elapsed = datetime_diff('minute', last_seen, first_seen)
+Answer: 7505
+I had to do some research because the module didn't teach *ALL* of this. But it was a great learning experience!
