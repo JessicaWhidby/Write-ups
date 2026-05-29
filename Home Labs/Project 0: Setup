@@ -3,19 +3,20 @@ My goal here is to learn more about how to practically apply the tools and knowl
 
 TOOLS USED
 - VMWare
-- Kali Linux, Windows 10, Windows Server 2022, Ubuntu (I used Server 2022 because 2025 appears to be bugged and virtually unusable in current state. Windows 10 is because I wanted an intentionally not-fully-updated system for vulnerability scanning practice)
+- Kali Linux, Windows 10, Windows Server 2022, Ubuntu (I used Server 2022 because 2025 appears to have stability issues. Windows 10 was selected as an intentionally vulnerable system for scanning and remediation purposes.)
 - Zenmap for network discovery and diagramming
 - Wazuh for vulnerability scanning and alerts
 
-Tools to be used:
+Future Plans:
 WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
 
 KEY TAKEAWAYS
 I learned how to:
-Setup a network
-Setup an AD domain and add users and computers
+Configure a virtual network, including use of DNS, DHCP, and routing
+Deploy an AD domain and add users and computers
 Scan the new network with nmap/Zenmap (Project 2)
 Run a vulnerability scan with Wazuh (Project 3)
+Troubleshoot install, connectivity, and authentication issues
 
 This is an excellent learning experience, and I hope to continue to build on it in the future. I am sure that the skills I have developed here will translate well into a professional environment, particularly the troubleshooting skills and puzzle solving.
 
@@ -25,8 +26,8 @@ After installing all of the OSs, I had to set up the Server VM with Active Direc
 While promoting to domain controller, I ran into an issue because the Admin password was weak. "net user Administrator [password]" fixes that. Once that was complete, I went into Active Directory Users & Computers and set up a few accounts, just so I can have something to play around with later.
 I also got a warning that the server didn't have a static IP, so I gave it an easy to remember (for me) IP and subnet mask. I also pointed the gateway/preferred DNS to itself. For DHCP configuration, I pointed it to my admin credentials (which I set up a new user for, rather than the default Admin account). Next, I set up a new scope and gave it an easy range, set the router IP to the static IP for the server, and activated.
 Finally, I needed Routing and Direct Access so the server can properly route traffic. I opened the Routing and Remote Access tool menu, selected NAT, and then pointed it to the externally-facing NIC. The internal NIC is strictly to connect with the client VMs, the external one controls access to the outside world.
-Finally, I added everything to the AD domain. In Windows, I have to go into the Network Settings and set the DNS server to the IP of the Server machine. From there, I go to Account settings, Access work or school, join to a local AD domain, and adding it to the domain. I had to input credentials of a domain admin to allow it on the domain.
-Now for the tricky part - I have to get Kali on the domain. It's not that much more difficult than adding a Windows machine to the domain, but it is a bit more involved. First, I had to update/upgrade the system and set the DNS to the domain controller again. Then, I had to install several packages to allow me to join Kali to the domain. For simplicity, here is a command that does all of them:
+I then added everything to the AD domain. In Windows, I have to go into the Network Settings and set the DNS server to the IP of the Server machine. From there, I go to Account settings, Access work or school, join to a local AD domain, and adding it to the domain. I had to input credentials of a domain admin to allow it on the domain.
+Kali was next to add to the domain, and it requires more configuration to do so. First, I had to update/upgrade the system and set the DNS to the domain controller again. Then, I had to install several packages to allow me to join Kali to the domain. For simplicity, here is a command that does all of them:
 sudo apt -y install realmd libnss-sss libpam-sss sssd sssd-tools adcli samba-common-bin oddjob oddjob-mkhomedir packagekit
 From there, I have to make sure the AD domain is discoverable on Kali:
 sudo realm discover [domain]
@@ -34,4 +35,8 @@ And finally:
 sudo realm join --user=[domain admin account] [domain]
 Ubuntu will largely follow a similar process, and this will be used for our Wazuh server.
 
-With everything functional, I can now start things like network mapping and vulnerability scanning!
+NEXT STEPS
+Scan the network and create a network diagram
+Deploy and configure Wazuh
+Conduct a vulnerability scan
+Research, prioritize, and remediate findings
