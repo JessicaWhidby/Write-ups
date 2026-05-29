@@ -20,7 +20,7 @@ An SQLi attack would have to have "/search.php" in the URL because you're search
 /search.php?search=book and 1=1; -- -
 
 Can you provide the complete request URI that was used to read the web server's available databases?
-This one took some research for me. Thankfully, I found this link:
+Research was necessary here, personally. This source was helpful:
 https://www.devart.com/dbforge/mysql/studio/how-to-show-all-database-list-in-mysql.html
 Which mentions:
 List databases in MySQL by information_schema
