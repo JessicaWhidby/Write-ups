@@ -1,17 +1,21 @@
-I enjoy investigating phishing emails - let's dive into an easy one to see how this platform works.
+This is intended to simulate a phishing email investigation.
+
+https://app.letsdefend.io/challenge/phishing-email
 
 What is the return path of the email?
-Let's go to the top and go to View > Headers > All. And there we see a bunch more information at the top of the email. If we scroll a bit within that, we find:
+Viewing the header reveals a lot of information at the top of the email:
 Return-Path <bounce@rjttznyzjjzydnillquh.designclub.uk.com>
+Sender email addresses can be spoofed, so checking the return path is a way to verify legitimacy.
 
 What is the domain name of the url in this mail?
-Let's hover over the links in the body of the email. We see that they all start with storage.googleapis.com.
+Inspecting the links in the body of the email shows that they all start with storage.googleapis.com.
 
 Is the domain mentioned in the previous question suspicious?
-If we do a quick search on the domain, we see that storage.googleapis.com is legit, but also frequently used maliciously. So yes, it is suspicious and should at least be worth looking into.
+Open source information gathering shows that storage.googleapis.com is legitimate, but also frequently used maliciously. So yes, it is suspicious depending on context.
 
 What is the body SHA-256 of the domain?
-Let's plug in "storage.googleapis.com" into VirusTotal and we get: 13945ecc33afee74ac7f72e1d5bb73050894356c4bf63d02a1a53e76830567f5
+VirusTotal investigation for "storage.googleapis.com" shows the SHA-256 as 13945ecc33afee74ac7f72e1d5bb73050894356c4bf63d02a1a53e76830567f5.
+This can be used to further research and determine if it is malicious. Hash values are unique and change drastically based on any change in the source material. If this hash has been found in previous incidents that were confirmed to be attack attempts, then the email given in this challenge is also indicated to be an attack attempt.
 
 Is this email a phishing email?
-Yeah, probably. It looks sketchy even before you go digging, and investigation sure didn't help its case.
+Yes, based on a suspicious return path and potentially malicious use of the domain in the included link.
