@@ -1,5 +1,6 @@
-We're getting more advanced here. These are our learning objectives:
+https://kc7cyber.com/challenges/1669#
 
+These are our learning objectives:
 - Use lookup to enrich data with information from another table
 - Understand when to use lookup vs join
 - Apply different join types: inner, leftouter, rightouter, fullouter
@@ -9,15 +10,15 @@ We're getting more advanced here. These are our learning objectives:
 
 
 Section 1: Introduction
-First, we are asked to find how many phishing emails were sent. In our rundown on the previous page, we are told that they come from noreply@whiskersandwonders-hr.com, and we are given:
+First, it asks us to find how many phishing emails were sent. In the summary on the previous page, it is shown that they come from noreply@whiskersandwonders-hr.com, and we are given this query:
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
-We are going into the Email table to find all emails from that sender.
+This query goes into the Email table to find all emails from that sender.
 Answer: 9
 
 
 Section 2: Correlation Techniques
-We are given this as an example of things we have learned before:
+This module shows this as an example of query logic learned in previous modules:
 let cat_care_specialist_ip = 
     Employees
     | where role == "Cat Care Specialist"
@@ -26,7 +27,8 @@ ProxyEvents
 | where src_ip in (cat_care_specialist_ip)
 | limit 100
 This query would set a variable called cat_care_specialist_ip, go to the Employees table, filter by the Cat Care Specialist role, and grab their IPs. Then, it would go to ProxyEvents, filter on the IPs just found, and return 100 events from that log.
-But then, we are also given another example to make the query even better:
+
+But then, the challenge creators give another example to make the query even better:
 Employees
 | where role == "Cat Care Specialist"
 | project name, ip_addr
@@ -34,10 +36,11 @@ Employees
     ProxyEvents                                  
  ) on $left.ip_addr == $right.src_ip  
 | where isnotempty( url)
-This will do the same thing, but with results that match up from one table to the next. So, for example, here, we would match up the IPs, but also give the employee's name to the left, as well (not just their IP address).
 
-We are asked to use the let/in approach to find out: How many employees clicked the phishing link?
-So we use this query:
+This will do the same thing, but with results that match up from one table to the next. So, for example, here, it would match up the IPs, but also give the employee's name to the left, as well (not just their IP address).
+
+Use the let/in approach to find out how many employees clicked the phishing link.
+So use this query:
 let victim_ips =     
     ProxyEvents
     | where domain in ("api-sync-updates.top", "update-cdn-service.xyz")
@@ -46,32 +49,17 @@ Employees
 | where ip_addr in (victim_ips)
 And the answer is 3. However, the results table here does not show us which domain was clicked by which person.
 
-Then, it gives us this query:
+Then, it gives this query:
 ProxyEvents
 | where domain in ("api-sync-updates.top", "update-cdn-service.xyz")
 | lookup Employees on $left.src_ip == $right.ip_addr
 | project-reorder timestamp, src_ip, name
-So here, we are looking directly at the ProxyEvents table, looking for those domains, then grabbing the source IP of that request. Then, we sneak over to the Employees table for a second to grab the matching IP from there. Finally, we are going to reorder what we just found and return (in this order), the timestamp, the IP, and the employee's name (and then the rest of the info from both ProxyEvents and Employees).
-This gives us 12 results, and we are asked: Who was the first person to click on a link to the malcious domain? (name)
+
+This gives 12 results. Then, the challenge creator's asked: Who was the first person to click on a link to the malcious domain? (name)
+The results are already sorted by timestamp.
 Answer: David Okonkwo
 
-We are given a nice reference table:
-Use let + in when:
-You need to filter one table based on values in another
-You don't need columns from both tables
-You just need some quick and basic filtering
-
-Use lookup when:
-You want to add columns from a reference table
-You have One-to-one matching (IP → Employee, Hostname → Asset)
-Every row needs to be enriched
-
-Use join when:
-You need to handle non-matches (leftouter, leftanti)
-You need columns from both tables for analysis
-You have complex matching or multiple matches per row
-
-We are given this example:
+There is another example given:
 Table1
 | lookup Table2 on $left.field1 == $right.field2
 This query will match Field1 in Table1 to Field2 in Table2.
@@ -81,48 +69,51 @@ Table1
 | lookup Table2 on common_field
 This one will reference Table1's field in Table2 with the same name.
 
-Then, we are asked: ou are joining Employees data (your enrichment data) against Authentication data (you main) data to see the names of accounts that were compromised. Which table is the left table?
+Then, we are asked: If you are joining Employees data (your enrichment data) against Authentication data (you main) data to see the names of accounts that were compromised. Which table is the left table?
 Answer: The left would be Authentication. Main data is always left, with the "other" information being on the right.
 
-We are then given:
+Then, it gives the sample query:
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
 | lookup Employees on $left.recipient == $right.email_addr
 | project-reorder timestamp, sender, recipient, ip_addr
-Which will go to the Email table and look for the suspicious sender. Then, it's going to go to the Employees table and match the recipient from the Email table with the email address from Employees. And finally, it will reorder the columns timestamp, sender, recipient, and IP address to be in that order first. Now each row also includes the employee's name, department, etc. from the Employees table.
-Then, we are asked: Two employees received links to update-cdn-service.xyz. What is the first email recipient's IP address?
-Running the above query, we see that the 2 recipients are jessica_huang@whiskersandwonders.org and alex_rivera@whiskersandwonders.org, with respective IPs of 10.10.16.24 and 10.10.16.7 (but flip them around for the answer. I didn't see the first result at first). All that in just 1 result!
 
-Next, we are told to use lookup to enrich the following phishing emails with employee information, with a template of:
+Then, it asks: Two employees received links to update-cdn-service.xyz. What is the first email recipient's IP address?
+Running the above query, we see that the 2 recipients are jessica_huang@whiskersandwonders.org and alex_rivera@whiskersandwonders.org, with respective IPs of 10.10.16.7 and 10.10.16.24.
+
+Next, it says to use lookup to enrich the following phishing emails with employee information. There is a template of:
 Email
 | where links has "aspca.org"
 | lookup _______
+
 So I filled it in like so:
 Email
 | where links has "aspca.org"
 | lookup Employees on $left.recipient == $right.email_addr
 | project-reorder timestamp, sender, recipient, name
+
 What is the hostname of the last employee to receive an email matching this pattern?
-And from this 1 result alone, we see the answer is: IIHO-DESKTOP
+And from this 1 result alone, it is revealed that the answer is: IIHO-DESKTOP
 
 Which role received the most emails from aspca.org?
-In the same result, we see 2 results for Adoption Coordinators, while the other results are unique.
+In the same result, there are 2 rows for Adoption Coordinators, while the other results are unique.
 
-Then, we are told that clicks appear in ProxyEvents:
+Then, it is mentioned that clicks appear in ProxyEvents:
 ProxyEvents
 | where domain in ("api-sync-updates.top", "update-cdn-service.xyz")
-And we are told: This shows raw click data, but we only see IP addresses, not names. We need to bring in the Employees table.
-Then, we are asked: How many results do we get?
-From this alone, we get 12 results.
+
+And it says that this shows raw click data. However, it only provides IP addresses, not names. For that, I have to reference the Employees table.
+How many results do we get?
+From this alone, there are 12 results.
 
 However, I already wrote a more detailed query for it which also works:
 ProxyEvents
 | where domain in ("api-sync-updates.top", "update-cdn-service.xyz")
 | lookup Employees on $left.src_ip == $right.ip_addr
 | project-reorder timestamp, src_ip, name
-And we get 12 results.
+And we still get 12 results.
 
-But then, they give us a twist.We are given:
+But then, they give us a twist.
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
 | lookup Employees on $left.recipient == $right.email_addr
@@ -134,8 +125,11 @@ Email
     )
     on $left._____ == $right._____, $left._____ == $right._____
 | project email_sent_at=timestamp, sender, recipient, ip_addr, links, link_clicked_at=timestamp1
-To take a stab at this before it's explained fully, I'll imagine this does the same thing for the first 4 lines. Then, it will turn the link from the Email table into a string (easier to work with String variables), look it up in the ProxyEvents logs, and then we have some information to fill in:
+
+To attempt to decipher this before it's explained fully, I'll imagine this does the same thing for the first 4 lines. Then, it will turn the link from the Email table into a string (easier to work with string variables), look it up in the ProxyEvents logs, and then there is some information to fill in:
+
     on $left.ip_addr == $right.src_ip, $left.links == $right.url
+
 So, what this will do is match the IP address from Employees to the source IP in ProxyEvents, and match the links in Email to the URL in ProxyEvents. And that last line after this one will return the timestamp under a column named email_sent_at, and then list out the sender, recipient, IP, links, and timestamp as link_clicked_at.
 The only time Alex clicked a link was at: 2025-06-05T16:33:00.000Z
 
@@ -144,46 +138,49 @@ Same query, same results table: 2025-06-05T16:58:00.000Z
 
 
 Section 3: Advanced Joins
-We are given some new information:
-The join operator offers:
+In this section, I learned about the join operator, which offers:
 Choice of what happens when records don't match
 Ability to keep records from one or both tables without matches
 Multiple join types for different analytical needs
 The kind= parameter specifies the join type.
+
 And given a sample query:
 Table1
 | join kind=inner (
     Table2
 ) on $left.field1 == $right.field2
-And told: An inner join only keeps records that match in BOTH tables.
+
+And told that an inner join only keeps records that match in BOTH tables.
 So this query would take only the matching columns from Table 1 and Table 2.
-Then, we are told: The first kind of join we can do is a leftouter join. This join takes our left table (main table) and add data from the right table if there are matching keys, but it doesn't drop any data, you are guaranteed to have at least the same number of rows you started with. And we are given:
+
+Then, we are taught that the first kind of join we can do is a leftouter join. This join takes the left table (main table) and adds data from the right table if there are matching keys. It doesn't drop any data, and you are guaranteed to have at least the same number of rows you started with.
 Email
 | where sender == "diego_hernandez@whiskersandwonders.org"
 | join kind=leftouter Employees on $left.recipient == $right.email_addr
 | project-reorder timestamp, sender, recipient, ip_addr
-So this query will go to the Email table and find results that Diego sent. Then, it would use a leftouter join to take the matching data from Email and Employees, which would be recipient email addresses (if we are looking at internal emails sent). Then, our first columns we see will be timestamp, sender (Diego), recipient (internal), and the recipient's IP. After that, we see the rest of the info from both tables.
-We are asked: How many results do we get back after the join?
+
+So this query will go to the Email table and find results that Diego sent. Then, it would use a leftouter join to take the matching data from Email and Employees, which would be the recipient email addresses (looking at internal emails sent). Then, the first columns will be timestamp, sender (Diego), recipient (internal), and the recipient's IP. After that is the rest of the info from both tables.
+How many results do we get back after the join?
 Answer: 15
 
-We are then told that unlike leftouter, an inner join only keeps records where there's a match in both tables. If a recipient doesn't exist in the Employees table, that row gets dropped entirely. We are given the query:
+Unlike leftouter, an inner join only keeps records where there's a match in both tables. If a recipient doesn't exist in the Employees table, that row gets dropped entirely.
 Email
 | where sender == "diego_hernandez@whiskersandwonders.org"
 | join kind=inner Employees on $left.recipient == $right.email_addr
 | project-reorder timestamp, sender, recipient, ip_addr
-Which will do the same thing as before, but instead of returning all info from both tables, it will only fill in cells with data that matches from both tables. The other columns will still exist, they will just return empty.
-Or, in their words: With leftouter, we kept all of Diego's emails regardless of whether the recipient was in our Employees table. With inner, we've filtered down to only emails where the recipient is a known employee. For example, if you're investigating internal-to-internal communication, an inner join naturally filters out any external recipients without needing an extra where clause.
+
+This will do the same thing as before, but instead of returning all info from both tables, it will only fill in cells with data that matches from both tables. The other columns will still exist, they will just return empty.
 How many results do we get back now?
 Answer: 7
 
 A rightouter join flips the logic of leftouter. Instead of keeping all rows from the left table, it keeps all rows from the right table and only adds matching data from the left.
-We are given this query again:
 Email
 | where sender == "diego_hernandez@whiskersandwonders.org"
 | join kind=rightouter Employees on $left.recipient == $right.email_addr
 | project-reorder timestamp, sender, recipient, ip_addr, email_addr, name
+
 For employees who received an email from Diego, you'll see the email data populated. For everyone else, the email columns (timestamp, sender, recipient, etc.) will be empty or null.
-This seems counterproductive for our current purposes, so they gave us a use case: Suppose you want to answer: "Which employees did Diego not email?" A rightouter join gives you every employee, and you can then filter for the ones with no matching email:
+This seems counterproductive for our current purposes, so they gave us a use case: "Which employees did Diego not email?" - A rightouter join gives you every employee, and you can then filter for the ones with no matching email:
 Email
 | where sender == "diego_hernandez@whiskersandwonders.org"
 | join kind=rightouter Employees on $left.recipient == $right.email_addr
@@ -192,7 +189,7 @@ Email
 How many results do we get back this time?
 Answer: 30
 
-We are then given:
+The next query shown is:
 Email
 | where links has "update-cdn-service.xyz"
 | mv-expand links to typeof(string)
@@ -202,13 +199,15 @@ Email
     | where url has "update-cdn-service.xyz"
 ) on $left.ip_addr == $right.src_ip, $left.links == $right.url
 | project timestamp, sender, recipient, links, clicked_at = timestamp1
-To paraphrase their own explanation, this query will find emails with the suspicious link. Then, it will change that link to a string and leftouter join it with the recipient's email from Employees. Then, we take another leftouter join and grab the URL from ProxyEvents, and we're going to match up the IP in Employees to the source IP in ProxyEvents and the links in Email to the URL in ProxyEvents. Then, we are going to have the first columns be timestamp, sender, recipient, links, and timestamp from ProxyEvents for when the link was clicked.
-Then, we are given another line to add to find who DIDN'T click:
-| where isempty(clicked_at)
-What percent of users clicked on the link?
-Well, 4 did not and there were 4 total, so 0%.
 
-We are then told to use a leftouter join and isempty() to find employees who received the phishing email with domain api-sync-updates.top but did NOT click.
+To paraphrase their explanation, this query will find emails with the suspicious link. Then, it will change that link to a string and leftouter join it with the recipient's email from Employees. Then, using another leftouter join, finds the URL from ProxyEvents and matches up the IP in Employees to the source IP in ProxyEvents and the links in Email to the URL in ProxyEvents. Then, the first columns are timestamp, sender, recipient, links, and timestamp from ProxyEvents for when the link was clicked.
+Then, it gives another line to add to find who DIDN'T click:
+| where isempty(clicked_at)
+
+What percent of users clicked on the link?
+4 did not and there were 4 total, so 0%.
+
+Use a leftouter join and isempty() to find employees who received the phishing email with domain api-sync-updates.top but did NOT click.
 And we are given the template:
 Email
 | where links has "api-sync-updates.top"
@@ -220,87 +219,91 @@ Email
 ) on $left.ip_addr == $right.src_ip, $left.links == $right.url
 | project timestamp, sender, recipient, links, clicked_at = timestamp1
 How many employees received an email but did not click on the attached link?
-So let's run that query as is and we get 5 results. Let's add back in the isempty clause, and we get 2.
+Run that query as is and it returns 5 results. Add back in the isempty clause, and it returns 2.
 
-Next up, we learn about leftanti joins. The leftanti join finds things that DON'T exist. It returns left rows (from the original table) with NO match in the right table (the one we are joining). We are given:
+Next up are leftanti joins. The leftanti join finds things that DON'T exist. It returns left rows (from the original table) with NO match in the right table (the one we are joining). We are given:
 Employees
 | join kind=leftanti (
     AuthenticationEvents
     | where timestamp between (datetime(2025-06-01) .. datetime(2025-06-07))
 ) on $left.username == $right.username
-This finds employees with no login activity in the week of June 1st. Here we will return rows from the employees table, but no additional info from from the Auth table. We are simply using the Auth table for filtering.
-Someone in our company has no Authentication data at all. Use leftanti to find them.
-What is the name of the employee with no auth data?
-Let's use the previous query, and take out the timestamp filtering.
+This finds employees with no login activity in the week of June 1st. Here, it will return rows from the Employees table, but no additional info from from the Authentication Events table. The AuthenticationEvents table is solely used for filtering.
+
+Someone in our company has no Authentication data at all. Use leftanti to find them. What is the name of the employee with no auth data?
+Use the previous query, and take out the timestamp filtering.
 Answer: Jason Chen
 
-Use leftanti to find employees who received the phishing email (from noreply@whiskersandwonders-hr.com) but did NOT click.
-How many emails were received where the recipients did not click the link?
-If we do this:
+Use leftanti to find employees who received the phishing email (from noreply@whiskersandwonders-hr.com) but did NOT click. How many emails were received where the recipients did not click the link?
+I came up with this query:
 Email
 | where sender has_any ("whiskersandwonders-hr", "api-sync-updates", "update-cdn-service")
 | where links has_any ("api-sync-updates", "update-cdn-service.xyz")
-The result is 9. If we add:
+
+The result is 9. If I add:
 | mv-expand links to typeof(string)
 | join kind=leftanti (
     ProxyEvents
 ) on $left.links == $right.url
-The result is 4. So logic says the answer should be 5. But it's 6. Honestly, can't tell you why.
 
-Anyway, the next page tells us: The leftsemi join is a filter. It returns left rows that have at least one match in the right table, but doesn't add right columns. Then we get:
+The result is 4. So logic says the answer should be 5, but the challenge says that the correct answer is 6. I experimented with various queries and cannot figure out the discrepancy.
+
+The leftsemi join is a filter. It returns left rows that have at least one match in the right table, but doesn't add right columns. Then, it shows:
 Employees
 | join kind=leftsemi (
     Email
     | where links has "update-cdn-service.xyz"
 ) on $left.email_addr == $right.recipient
-This will go to Employees, return things that match the email link, and tell the database that email_addr from Employees is the same as recipient from Email.
-Or, as they put it: This returns employee records for everyone who received a phishing email, with only the Employees columns. Similar to let + in, but with full join syntax flexibility.
 
 Use leftsemi to get full employee records for everyone who clicked the phishing link. What roles do the clickers belong to? (List all of them)
 Using the query above: Adoption Coordinator, Development Officer
 
 
 Section 4: Text Processing
-Next, we are taught about parsing. It gives us this:
+Parsing is taught next. It shows this query:
 ProxyEvents
 | take 100
 | parse url with "https://" domain "/" *
+
 And tells us:
 This extracts the domain from a URL:
 Look for the literal text "https://"
 Capture everything until the next "/" into a new column called domain
 Ignore the rest (*)
+
 Then we are told:
 The Employees table has an email_addr column with values like diego_hernandez@whiskersandwonders.org.
 Write a query that:
 Parses the email address to extract the username (the part before the @)
 Projects just the name and username columns
+
 And then asked: How many characters are in the longest email address username?
-So our query should look something like:
+The query should look like:
 Employees
 | parse email_addr with user "@" domain "." *
 | project name, user
-Just eyeballing it, it looks like this is the longest username: jasmine_rodriguez
-So: 17
+It appears this is the longest username: jasmine_rodriguez
+Answer: 17
 
-Then, we are told about split(). We are given:
+Next to learn is split():
 Employees
 | extend parts = split(email_addr, "@")
 | extend username = parts[0]
 | extend domain = parts[1]
-And told: This splits alice@company.com into ["alice", "company.com"], then extracts each part by index.
+This splits alice@company.com into ["alice", "company.com"], then extracts each part by index.
+
 What is the first filename created on pawilson's machine?
-And we are given the template:
+Given the template:
 FileCreationEvents
 | where username == 'pawilson'
 | extend parts = // your code here
 | extend filename = // your code here
+
 Here's what I came up with:
 FileCreationEvents
 | where username == 'pawilson'
 | extend parts = split(path, "\\") // Double slash to escape the character
 | extend filename = parts[-1] //I know how to use -1 in an array from prior programming knowledge
-And survey says: spotify.exe
+Answer: spotify.exe
 
 What domain sent the most emails?
 Given:
@@ -311,11 +314,12 @@ Email
 Answer: whiskersandwonders.org
 
 Use parse to extract domains from URLs in ProxyEvents. How many unique domains were visited?
-Honestly, you could just:
+This query would work:
 ProxyEvents
 | distinct domain
 Answer: 488
-But if you want to do what they asked:
+
+But to do what they asked:
 ProxyEvents
 | extend domain == parse_url("\\")
 | summarize count() by tostring(domain)
@@ -324,7 +328,7 @@ ProxyEvents
 
 Section 5: Final Investigation
 Find all employees who received the phishing email from noreply@whiskersandwonders-hr.com with their names and roles. How many unique employees received the phishing email?
-I did:
+I ran:
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
 | join kind=leftouter Employees on $left.recipient ==$right.email_addr
@@ -332,12 +336,14 @@ Email
 And it gave me 3 results.
 
 Join phishing emails with click events to find who clicked. What percentage of emails resulted in a click? (Round to nearest whole number)
-First, let's take a step back:
+First, take a step back:
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
-This returns 9 emails. There are 9 emails total.
+
+This returns 9 emails total.
+
 Then:
-let recpt=
+let recpt =
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
 | join kind=leftouter Employees on $left.recipient ==$right.email_addr
@@ -345,10 +351,11 @@ Email
 ProxyEvents
 | where src_ip in (recpt)
 | distinct src_ip
-Answer here is 3. So the overall answer is 33%.
+
+The answer here is 3. So the overall answer is 33%.
 
 Find evidence of ongoing C2 communication from compromised workstations. How many accounts appear to be compromised?
-This got me the answer:
+This query led to the correct answer:
 Email
 | where sender == "noreply@whiskersandwonders-hr.com"
 | join kind=leftouter Employees on $left.recipient ==$right.email_addr
@@ -359,8 +366,8 @@ Answer: 3
 Identify the latest C2 communication. What is this type of activity called?
 Answer: Beaconing
 
-Use union to build a complete timeline from first phishing email to last C2 beacon. How many minutes passed between the first phishing email and the attacker's last action?
-Not going to lie to you, I needed some help here, but this is what I got:
+How many minutes passed between the first phishing email and the attacker's last action?
+I had to review some documentation, but this is what I got:
 let phishing_email =
 Email
 | where sender has "noreply@whiskersandwonders-hr.com"
@@ -376,4 +383,4 @@ union phishing_email, attacker_activity
 | summarize first_seen=min(timestamp), last_seen=max(timestamp)
 | extend minutes_elapsed = datetime_diff('minute', last_seen, first_seen)
 Answer: 7505
-I had to do some research because the module didn't teach *ALL* of this. But it was a great learning experience!
+I had to do some research because the module didn't teach everything in this query. But it was a great learning experience!
