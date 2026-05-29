@@ -1,4 +1,4 @@
-Our pre-challenge blurb tells us we are going to learn about how networks actually work: IP addresses, VLANs, firewalls, ports, protocols, and DNS.
+The pre-challenge blurb tells us we are going to learn about how networks actually work: IP addresses, VLANs, firewalls, ports, protocols, and DNS.
 
 Our learning objectives are:
 - Learn the basics of networking
@@ -13,7 +13,10 @@ Our learning objectives are:
 - Recognize C2 beaconing patterns in network traffic
 - Correlate phishing emails to resulting network compromise
 
-Our tags for this module are: Analyzing Network , Understanding Network Communication, Pivoting Across Data
+The tags for this module are: Analyzing Network , Understanding Network Communication, Pivoting Across Data
+
+https://kc7cyber.com/challenges/1664
+
 
 Section 1: Welcome to the Chaos
 No real challenges here, just background information on the situation you're handling.
@@ -24,13 +27,13 @@ What does IP stand for?
 I know this from previous education and experience - Internet Protocol.
 
 How many octets are in an IPv4 address?
-Again, basic trivia - 4.
+Again, basic OSINT - 4.
 
 Is 10.10.16.5 a public or private IP address?
-Right above this, the private ranges are listed. This one is private.
+This one is private.
 
 Is 8.8.8.8 public or private?
-The logic is again right above the question. It is not within a private range; therefore, it is public.
+It is not within a private range; therefore, it is public.
 
 192.168.1.1 is a common home router address. Public or private?
 Private
@@ -45,28 +48,25 @@ Is 185.174.137.42 public or private?
 Public
 
 How many VLANs (network zones) does Whiskers & Wonders have?
-Ah, we're finally given a query to use!
 DeviceInfo
 | summarize device_count=count() by vlan
 | order by device_count desc
 The resulting output shows 5 different VLANs.
 
 Which VLAN has the most devices?
-We can use the same output as from the previous query. Workstations has 36 devices, which is far above servers (the next highest, at 9).
+Use the same output as from the previous query. Workstations has 36 devices, which is far above servers (the next highest, at 9).
 
 What is the IP address of the DonationPortal?
-Another query:
 DeviceInfo
 | where vlan == "dmz"
 | project name, ip_address, host_type
 First line of the output gives us the answer - 10.10.0.3
 
 What is the IP address of MailServer01?
-We are given:
 DeviceInfo
 | where vlan == "servers"
 | project name, ip_address
-Scrolling through the output, we see the answer - 10.10.1.2
+Answer: 10.10.1.2
 
 What device is in the restricted zone?
 DeviceInfo
@@ -75,30 +75,27 @@ DeviceInfo
 Answer: DomainController
 
 What VLAN do IPs starting with 10.10.1 belong to?
-We were given this table:
 DMZ: 10.10.0.x
 Servers: 10.10.1.x
 Restricted: 10.10.2.x
 Workstations: 10.10.16.x
-And this query:
 DeviceInfo
 | where ip_address startswith "10.10.1"
 | project name, ip_address, vlan
 | take 5
-Either one will tell you - workstations. (You'd have to get rid of the last line of the query though. It's tricky and pulled the 10.10.16 addresses too, since they technically start with 10.10.1)
+Answer: workstations. (You'd have to get rid of the last line of the query though. It's tricky and pulled the 10.10.16 addresses too, since they technically start with 10.10.1)
 
 What IP range are workstations in? (format: 10.10.X)
-We just saw this in the prior query: 10.10.16
+Answer: 10.10.16
 
 What is the IP address of the DNS-Server?
-We're given:
 DeviceInfo
 | where name == "DNS-Server"
 | project name, ip_address, vlan
 Answer: 10.10.1.7
 
 What table would show you DNS lookups?
-We have 2 choices if we type in "Dns" - DnsEvents and PassiveDns. I'd imagine it's in DnsEvents, and that is correct.
+We have 2 choices if we type in "Dns" - DnsEvents and PassiveDns. Answer: DnsEvents
 
 What zone contains the Domain Controller?
 Refer back to her network diagram in Section 2, Question 10: restricted
@@ -109,7 +106,7 @@ What is the maximum port number?
 65535 (shown rightabove the question).
 
 What port number is used for HTTPS?
-Also given a table of common ports here - 443
+443
 
 What port number is used for DNS?
 53
@@ -122,68 +119,57 @@ This one I didn't remember right off, so I found this site - https://learn.micro
 Answer: 3389
 
 What destination port has the most traffic?
-Query given:
 NetworkFlow
 | summarize traffic=count() by dest_port
 | order by traffic desc
 | take 5
-This will show us 5 results, stemming from the NetworkFlow table and filtering by traffic on destination ports. It is then ordered by traffic, descending.
 Answer: 25
 
 What does SMTP stand for?
-More trivia I remember from previous studying - Simple Mail Transfer Protocol
+Simple Mail Transfer Protocol
 
 What does TCP stand for?
-More trivia, but written out above - Trasmission Control Protocol
+Trasmission Control Protocol
 
 What does UDP stand for?
-Written out in the last question - User Datagram Protocol
+User Datagram Protocol
 
 What protocol does DNS primarily use?
-Query given:
 NetworkFlow
 | where dest_port == 53
 | summarize count() by protocol
-This will show us flow information filtered by port 53, which is what DNS uses. Then it will tell us how much traffic there was by TCP/UDP.
 Answer: UDP
 
 What protocol carries the majority of network traffic on this network?
-Query given:
 NetworkFlow
 | summarize count() by protocol
 | order by count_ desc
-This will show us information related to protocols and how much traffic they generated. It is then sorted in descending order.
 Answer: TCP
 
 What does DNS stand for?
-More trivia - Domain Name System
+Domain Name System
 
 The DnsEvents table logs every DNS lookup on the network. You can see which device asked, what domain they asked about, and what IP address was returned. What column contains the domain name that was looked up?
-Query given:
 DnsEvents
 | take 5
 | project timestamp, client_ip, query_name, resolved_ips, dns_server
-This will look at the DNS Events table, gather all of the columns, and take 5 rows to give us sample information.
 Answer: query_name
 
 What type of DNS record maps a domain to an IPv4 address?
-Trivia, but also written above the question - A
+A
 
 What does TTL stand for?
-Trivia written above the question - time to live
+Time to live
 
 What IP address did docs.google.com resolve to?
-Query given:
 DnsEvents
 | where query_name == "docs.google.com"
 | where query_type == "A"
 | project timestamp, client_ip, query_name, resolved_ips
 | take 1
-This will check the DNS logs, look at the traffic that queried the referenced domain, look for A records (domain name to IPv4), and show all the relevant columns.
 Answer: 152.52.146.99
 
 What protocol was this DNS query using?
-Query given:
 NetworkFlow
 | where src_ip == "10.10.16.14"
 | where timestamp between (
@@ -192,17 +178,14 @@ NetworkFlow
 | where dest_port == "53"
 | project timestamp, src_ip, dest_ip, dest_port, protocol
 | limit 10
-This query is a bit more involved: It's going to check the network flows for a particular internal IP (our user), filtering by particular timestamps. Then, it filters further by port 53 (DNS), and grabs the relevant columns.
 Answer: UDP
 
 What destination port was used for the HTTPS connection?
-This is more trivia again, really, but it gives us a query, so we might as well use it:
 NetworkFlow
 | where src_ip == "10.10.16.14"
 | where dest_ip == "152.52.146.99"
 | project timestamp, src_ip, dest_ip, dest_port, protocol
 | take 1
-This will check the source IP of our user, the destination of docs.google.com, and grab the relevant columns.
 Answer: 443
 
 We are then given this query:
@@ -212,173 +195,128 @@ ProxyEvents
 | where timestamp between (datetime(2025-06-03 08:50:00) .. datetime(2025-06-03 09:00:00))
 | project timestamp, src_ip, url, status_code
 | take 1
-And asked: What HTTP status code was returned?
-This query will take logs from the proxy server, filter by our internal user's IP and the destination of docs.google.com, between a particular time frame, and gather the relevant columns.
+What HTTP status code was returned?
 Answer: 200
 
-We are then told: You just traced a single web request across three different log sources:
-Step	Table	What it shows
-1	DnsEvents	Domain → IP resolution
-2	NetworkFlow	UDP to DNS server (port 53)
-3	NetworkFlow	TCP to website (port 443)
-4	ProxyEvents	Full URL and response
-That's pretty cool!
 What happens first when browsing to a website: the DNS lookup or the TCP connection?
 DNS lookup has to come first so the computer knows where to connect to.
 
-We are then given this query:
-ProxyEvents
-| take 5
-| project src_ip, url, method, status_code
 What column contains the full URL?
-Would make sense to be "url"
+Answer: url
 
 What status code indicates a successful request?
-Trivia listed above the question - 200
+200
 
 What HTTP method is used to submit form data?
-POST (also listed above the question)
+POST
 
 
 Section 4: The Picture Emerges
 What domain resolves to 185.174.137.42?
-We are given the query:
 DnsEvents
 | where resolved_ips has "185.174.137.42"
 | distinct query_name
-This will look at DNS logs to find what was queried to resolve to that IP.
 Answer: update-cdn-service.xyz
 
 How many distinct internal IPs queried this domain?
-We are given:
 DnsEvents
 | where query_name contains "update-cdn-service.xyz"
 | distinct client_ip
-This will query the DNS logs to find instances where the queried domain was upadte-cdn-service.xyz and filter unique internal user IPs.
 Answer: 3
 
 Is update-cdn-service.xyz an internal domain or an external domain?
 External - this doesn't match the organization we work for in IP or domain.
 
 What destination port is this traffic using?
-We are given:
 NetworkFlow
 | where dest_ip == "185.174.137.42"
 | project timestamp, src_ip, dest_ip, dest_port, protocol, bytes
 | take 10
-This will take network flow logs, filter by the update-cdn-service.xyz IP, and give us the relevant columns.
 Answer: 443
 
 What protocol normally runs on port 443?
-If we remember from before, that answer is HTTPS.
+HTTPS
 
 What URL path appears repeatedly in these requests?
-Given the query:
 ProxyEvents
 | where domain == "update-cdn-service.xyz"
 | project timestamp, src_ip, url, method, status_code
 | order by timestamp asc
-This will check our proxy server logs, search for the suspicious domain, and sort the results by timestamp, getting more recent as you go.
 Answer: /api/v1 (with status or config following that)
 
 What does C2 stand for?
-Trivia - command and control
+Command and control
 
 What is the term for malware regularly checking in with its C2 server?
-Trivia, also listed above the question - beaconing
+Beaconing
 
 What domain in the sender address is impersonating the sanctuary?
-We are given:
 Email
 | where sender !endswith "@whiskersandwonders.org"
 | where sender contains "whiskersandwonders"
 | project timestamp, sender, recipient, subject
-This will check email logs, look for addresses ending with our actual domain or containing the name of the shelter at all, and retrieve relevant columns.
 Answer: noreply@whiskersandwonders-hr.com
-Sneaky, sneaky!
 
 What was the subject line of the phishing email?
-Given:
 Email
 | where sender contains "whiskersandwonders-hr.com"
 | project timestamp, sender, recipient, subject
-This checks the email logs for that particular domain in the sender field.
 Answer: [EXTERNAL] Important: Employee Benefits Update Required
 
 How many employees received the phishing email?
-Given:
 Email
 | where sender contains "whiskersandwonders-hr.com"
 | distinct recipient
-This one will check as before, but also filter by unique recipients.
 Answer: 3
 
 Did all three phishing recipients become compromised? (yes/no)
-We are given:
-// Get phishing recipients
 Email
 | where sender contains "whiskersandwonders-hr.com"
 | distinct recipient
-// Compare to C2 DNS queries
 DnsEvents
 | where query_name contains "update-cdn-service.xyz"
 | distinct client_ip
-This will check email logs for the suspicious domain and filter by unique recipients. Then, it will go to the DNS logs and look for the other suspicious domain (update-cdn-service.xyz) and check for unique IP addresses running traffic to that domain.
 We got 3 results, so the answer is yes.
 
 What date was the first phishing email sent? (copy and paste)
-We are given:
 Email
 | where sender contains "whiskersandwonders-hr.com"
 | project timestamp, recipient
 | order by timestamp asc
-This checks the email logs, looks for the suspicious email sender domain, gives us a timestamp and recipient for each, and then orders them so the earliest one is first.
 Answer: 2025-06-02T16:00:00.000Z
 
 Approximately how many hours between the phishing email and the first C2 beacon?
-Given:
 DnsEvents
 | where query_name contains "update-cdn-service.xyz"
 | summarize first_query=min(timestamp) by client_ip
 | order by first_query asc
-This checks the DNS logs, looks for traffic querying the update-cdn-service.xyz domain, looks for the first query and grabs the timestamp and source IP. Then, it orders them so the earliest one is on top.
 Answer: 7
 
 How many requests did the victim computer make to the malicious domain?
-Given:
 ProxyEvents
 | where domain == "update-cdn-service.xyz"
 | project timestamp, src_ip
 | order by timestamp asc
-This query will search our proxy logs, look for the update-cdn-service.xyz domain, retrieve the timestamps and source IPs (AKA, from our network), and order so the earliest is first.
 Answer: 6 results shown
 
 What is the C2 domain?
-We are given:
-// Malicious domain
 DnsEvents 
 | where query_name contains "update-cdn-service.xyz" 
 | distinct query_name
-// Malicious IP
 DnsEvents 
 | where query_name == "update-cdn-service.xyz" 
 | distinct tostring(resolved_ips)
-// Phishing domain
 Email 
 | where sender contains "whiskersandwonders-hr" 
 | distinct sender
-This one is a bit more complicated. This will check our DNS logs first, sorting by queries to the update-cdn-service.xyz domain, and get the unique queried domains. Then, we're going to take that information and grab the IPs that the queried domains resolved to, and convert those IPs to strings. Finally, we're going into our email logs to look for emails from whiskersandwonders-hr and filtering the unique senders.
-HOWEVER, we realistically only need to look at the first piece of this: update-cdn-service.xyz
+Answer: update-cdn-service.xyz
 
 What is the C2 IP address?
-Let's run this piece:
-// Malicious domain
 DnsEvents 
 | where query_name contains "update-cdn-service.xyz" 
 Answer: 185.174.137.42
 
 What is the phishing sender domain?
-We only need this piece:
 Email 
 | where sender contains "whiskersandwonders-hr" 
 | distinct sender
@@ -388,13 +326,11 @@ What destination port is the C2 traffic using?
 This was answered earlier: 443
 
 What is the name of the compromised Development Officer?
-We are given:
 DnsEvents
 | where query_name contains "update-cdn-service.xyz"
 | distinct client_ip
 | join kind=inner (Employees | project ip_addr, name, username, role) on $left.client_ip == $right.ip_addr
 | project name, username, role
-This will look at our DNS logs, filter by the update-cdn-service.xyz domain and retrieve the unique client (internal) IPs. Then, it's going to join that information with information from the Employees table; specifically, the IP, name, username, and role of the person sending the DNS query.
 Answer: Alex Rivera
 
 What role do two of the compromised users share?
@@ -410,14 +346,10 @@ What URL path pattern should be blocked at the proxy?
 This should be from the URLs found earlier: /api/v1
 
 What table should you query to detect C2 domain lookups?
-Given this query:
-// Detection 1: DNS query to known C2
 DnsEvents
 | where query_name in ("update-cdn-service.xyz")
-// Detection 2: Traffic to C2 IP
 NetworkFlow
 | where dest_ip == "185.174.137.42"
-// Detection 3: Proxy pattern matching
 ProxyEvents
 | where url matches regex @"/api/v\d+/(status|config)"
 | where domain endswith ".xyz"
@@ -430,7 +362,6 @@ What table should you query to detect the /api/v1/status beaconing pattern?
 ProxyEvents
 
 Approximately how many days has the C2 been active?
-Given:
 let c2_domain = "update-cdn-service.xyz";
 let compromised_ips = DnsEvents
 | where query_name contains c2_domain
@@ -443,5 +374,4 @@ DnsEvents
     last_beacon = max(timestamp),
     total_queries = count()
   by client_ip
-This one's a doozy - it looks at the C2 domain and DNS logs. It will look in the DNS logs for the C2 domain and unique client (internal) IPs querying the C2 domain. Then, it will look for the compromised IPs (the ones going to the C2 domain) and summarize the results for us: it will give us the first becaon, the last one, and the numberof queries that were sent. It then sorts it all by client (internal) IP.
 Answer: 4
