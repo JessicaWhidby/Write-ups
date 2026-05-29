@@ -5,32 +5,31 @@ We are given an infected zip file to analyze.
 
 Question 1) What is the SHA1 hash value of the sample? (Format: SHA1Hash)
 The password for the archive is given to us next to the download button, so extract using password "infected".
-I just learned a lot of Linux commands during my time spent in the SANS Cyber Academy.
-I can open Kali and run:
+Open Kali and run a checksum tool:
 sha1sum sample.doc
 And get:
 06727ffda60359236a8029e0b3e8a0fd11c23313
 
 Question 2) According to VirusTotal, what is the full filetype of the provided sample? (Format: X X X X)
-Moving to the VirusTotal website, I loaded that file into the website. Conveniently in the Details pane, a few lines down, we see a File Type line with the value: Office Open XML Document.
+Load that file into the VirusTotal website. In the Details pane, a few lines down, there is a File Type line with the value: Office Open XML Document.
 
 Question 3) Extract the URL that is used within the sample and submit it (Format: https://x.domain.tld/path/to/something)
-If we then make our way to the Relations tab, we see "Contacted URLs." The longest/most specific one is  	https://www.xmlformats.com/office/word/2022/wordprocessingDrawing/RDF842l.html, so I tried that as the answer and it works!
+Going to the Relations tab, there is a "Contacted URLs" section. The longest/most specific one is  	https://www.xmlformats.com/office/word/2022/wordprocessingDrawing/RDF842l.html.
 
 Question 4) What is the name of the XML file that is storing the extracted URL? (Format: file.name.ext)
-I went to "Bundled Files," and the first one is:
+Go to "Bundled Files," and the first one is:
 word/_rels/document.xml.rels
 
 Question 5) The extracted URL accesses a HTML file that triggers the vulnerability to execute a malicious payload. According to the HTML processing functions, any files with fewer than <Number> bytes would not invoke the payload. Submit the <Number> (Format: Number of Bytes)
-I went to Google for this one.
-This article gives us some good info about the Follina vulnerability itself:
+Open source intelligence (OSINT) resources help here.
+This article gives some good info about the Follina vulnerability itself:
 https://www.hackthebox.com/blog/cve-2022-30190-follina-explained
 And mentions that "The secondary payload must surpass 4096 bytes to evade specific size checks."
 
 Question 6) After execution, the sample will try to kill a process if it is already running. What is the name of this process? (Format: filename.ext)
-Going to another site (which also would have answered the previous question, but I digress).
+Additional investigation led to another article (which also would have answered the previous question).
 https://www.huntress.com/blog/microsoft-office-remote-code-execution-follina-msdt-bug
-It tells us that there is a Base64 string that decodes to:
+It mentions that there is a Base64 string that decodes to:
 taskkill /f /im msdt.exe
 Answer: msdt.exe
 
@@ -40,7 +39,7 @@ The above link also gives us this information:
 So the answer is "msdt.exe, winword.exe."
 
 Question 8) Submit the MITRE technique ID used by the sample for Execution [Hint: Online sandbox platforms can help!] (Format: TXXXX)
-Go back to VirusTotal, under Behavior, and I can also see the MITRE techniques for each aspect of the malware. I just tried each one under Execution, and the answer was T1559.
+Go back to VirusTotal, under Behavior, and the MITRE techniques for each aspect of the malware is listed.  I just tried each one under Execution, and the answer was T1559.
 
 Question 9) Submit the CVE associated with the vulnerability that is being exploited (Format: CVE-XXXX-XXXXX)
-Simple Google search, first hit from OWASP, gives us this answer: CVE-2022-30190.
+More OSINT, first hit from OWASP, gives us this answer: CVE-2022-30190.
