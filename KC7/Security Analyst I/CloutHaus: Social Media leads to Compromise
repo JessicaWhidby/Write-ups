@@ -1,7 +1,9 @@
-We start  with some background: Afomiya Storm is a rising social media influencer who also uses her personal email for business inquiries.
-Honestly, that already sets off my alarm bells. If you have personal email sent to business accounts, you are more likely to open yourself up to phishing attempts. There is more information to perform reconnaissance from, which means the targeting is much more likely to work.
+https://kc7cyber.com/challenges/1360#
 
-We are provided with a screenshot of her Instagram and asked to find her email address. This is luckily listed right at the top: afomiya.storm@gmail.com
+Some background: Afomiya Storm is a rising social media influencer who also uses her personal email for business inquiries.
+That already sets off alarm bells. If you have personal email sent to business accounts, you are more likely to open yourself up to phishing attempts. There is more information to perform reconnaissance from, which means the targeting is much more likely to work.
+
+They have provided us with a screenshot of her Instagram and asked to find her email address. This is listed right at the top: afomiya.storm@gmail.com
 
 
 Next, we are given a multiple choice question: Which of the following signs should Afomiya look for to determine if an email offering a brand deal is a phishing attempt?
@@ -9,193 +11,186 @@ A. The email contains urgent or threatening language, pressuring her to act quic
 This is true because if you act quickly, you are less likely to think critically.
 
 B. The email asks for sensitive information like her password, credit card details, or social security number.
-Of course this would be suspicious. No one should ever need this information via email. Any legitimate reason for such information would be sent and received via more secure channels.
+No one should ever need this information via email. Any legitimate reason for such information would be sent and received via more secure channels.
 
 C. The email comes from a domain name that looks suspicious or doesn’t match the legitimate brand’s official domain.
-If the domain name looks off, even slightly, it is most likely a spoof.
+If the domain name looks off, even slightly, it could be a spoof.
 
 D. The email has generic greetings like "Dear Customer" instead of addressing her by name or title.
 Generic greetings and statements would indicate a potential attacker mass-emailing anyone they can to see who bites.
 
 E. All of the above.
-There we go; that's our answer!
+Yes, this one is correct.
 
 
-Next, we are told that Afomiya is answering questions from followers. This is great for engagement, but also great for potential attackers to get some info they can use for phishing attempts or answering security questions. This is a good attempt at social engineering, which is our answer here.
+Next, it says that Afomiya is answering questions from followers. This is great for engagement, but also great for potential attackers to get some info they can use for phishing attempts or answering security questions. This is a good attempt at social engineering, which is our answer here.
 
 
-And as we suspected, the attacker can use her answers to get through security questions and reset her password. We are told that this was the attacker using OSINT, or Open Source Intellgence. We are then given a screenshot of the authentication log to identify the answers the attacker used. Our question is then: What answer did the attacker enter to try and bypass the security questions? There are 2 given answers in the URL, so I entered: Kidus.
+And as I suspected, the attacker can use her answers to get through security questions and reset her password. They say that this was the attacker using OSINT, or Open Source Intellgence.Then, they provide a screenshot of the authentication log to identify the answers the attacker used. The question is then: What answer did the attacker enter to try and bypass the security questions? There are 2 given answers in the URL, so I entered: Kidus.
 
 
 Now that the attacker has gotten through the security questions, they run into a roadblock. They can't get the code being sent to Afomiya's phone. This security measure is called two-factor authentication, which is the answer here.
 
 
-Next, we are asked to find Afomiya's email. We are given this query:
+Next, find Afomiya's email. This requires a query:
 Employees
 | where name contains "afomiya"
-This query means that we are searching the Employee table and getting all of the associated information for any name containing "afomiya". This gives us output columns of: hire_date, name, user_agent, ip_addr, email_addr, username, role, hostname, mfa_enabled, and comapny_domain. 
-Which means that her email is: afomiya_storm@clouthaus.com
+This shows that her email is: afomiya_storm@clouthaus.com
 
 
-Next, we asked of her role. We are given the query:
+What is her role?
 Employees
-| where name contains "first name"
+| where name contains "afomiya"
 | distinct role 
 Which will show us the unique role(s) associated with the name we plug in.
-Or.. we could just scroll to the right of what we already have and see that her role is Influencer Partner.
 
-
-Now we have to see if Afomiya has MFA enabled. We are given:
+Now, to see if Afomiya has MFA enabled.
 Employees
-| where name contains "name"
+| where name contains "afomiya"
 | distinct mfa_enabled
-Which will just show us if MFA is enabled for the name we plug in. Unfortunately, we see the answer is False.
+The answer is False.
+This could allow an attack to get into her account much more easily than if 2-factor authentication was being used.
 
 
-Next, we are told that she got an email from Dior! But.. her alarm bells are going off. The sender's email address looks suspicious. Let's find this email and see what this address is. We are given the query:
+She got an email from Dior! But her alarm bells are going off. The sender's email address looks suspicious. They give us this query template:
 Email
 | where recipient == "enter full email"
 | where subject contains "enter keyword" or links contains "enter keyword"
-So we plug in her email address into the second line and "Dior" into the third. This will show us any emails to or from Afomiya with either subjects or links with anything to do with Dior.
-The email we are looking for is: collabs@dior-partners.com
+So plug in her email address into the second line and "Dior" into the third. This will show any emails to or from Afomiya with either subjects or links with anything to do with Dior.
+The email is: collabs@dior-partners.com
 
 
-Now we are looking for the subject line itself. Let's scroll the right, and we see: [EXTERNAL] Exclusive Partnership Opportunity with Dior
-As the challenge tells us, usually [EXTERNAL] is used for corporate emails to warn users that it is not from inside the company and therefore could be suspicious. However, remember that she uses 1 address for both business and personal purposes. That makes this a little more suspicious.
+Now to look for the subject line itself: [EXTERNAL] Exclusive Partnership Opportunity with Dior
+As the challenge mentions, usually [EXTERNAL] is used for corporate recipients to warn users that it is not from inside the company and therefore could be suspicious. However, remember that she uses 1 address for both business and personal purposes. That makes this a little more suspicious; there is no corporate email to filter internal or external.
 
 
-We are then asked for the link supplied in the email. Let's scroll over a bit more: ["https://super-brand-offer.com/login"]
-That link has nothing to do with Dior and looks like it will ask for credentials. Uh oh!
+What is the link supplied in the email?
+"https://super-brand-offer.com/login"
+That link has nothing to do with Dior and looks like it will ask for credentials. This is very suspicious and asking for credentials is always malicious. There is no legitimate reason to ever need someone else's password!
 
 
-Now, we have to confirm if she clicked the link. We are given the query:
+Now, to confirm if she clicked the link.
 OutboundNetworkEvents
-| where url contains "enter suspicious domain"
-This will show us any outbound traffic to a domain we plug in, so let's check out "https://super-brand-offer.com".
-Unfortunately, we get 2 hits. We need to find what time she clicked the link, so let's go with the earlier timestamp: "timestamp": 2025-04-03T11:20:00.000Z
+| where url contains "super-brand-offer.com"
+There are 2 hits. Now, I need to know what time she clicked the link: "timestamp": 2025-04-03T11:20:00.000Z
 
 
-What username did she enter, you ask? If we look at the second entry in expanded view (via the arrow), we see this line: "url": https://super-brand-offer.com/login?username=afstorm&password=**********
+What username did she enter? 
+There is this line: "url": https://super-brand-offer.com/login?username=afstorm&password=**********
 
 
-Now, we go on to associating the domain name to an IP address. We are given this query:
+Now, I have to link the domain name to an IP address.
 PassiveDns
 | where domain contains "enter suspicious domain"
-So we plug in the previously found domain (minus the "https://") and we get 2 hits with the IP address of 198.51.100.12.
+So look for the previously found domain (minus the "https://") and there are 2 hits with the IP address of 198.51.100.12.
 
 
-Next, we are told that one IP can be associated with multiple domains, which would indicate a potential red flag. We are given:
+Next, it is mentioned that one IP can be associated with multiple domains, which would indicate a potential red flag. If one IP address registers multiple domains, they could be trying to trick people with multiple malicious URLs.
 PassiveDns
 | where ip contains "enter IP address"
 | distinct domain
-Plug in the previously found IP, and we get 3 hits.
+Search for the previously found IP, and there are 3 hits.
 
 
-We are then asked to enter a few predetermined answers, including whether messages now being sent from her account are legitimate or phishing... of course, they are phishing attempts. The attacker is in her account right now.
+Then, to enter a few predetermined answers, including whether messages now being sent from her account are legitimate or phishing.
+They are phishing attempts. The attacker is in her account right now, so they would likely be trying to get more credentials to perform lateral movement.
 
 
-Now, we have to reverse image search pictures she has posted of her apartment to find out where she lives - more OSINT. We see that she lives at The Apartments at CityCenter in Washington, D.C.
+Reverse image search pictures she has posted of her apartment to find out where she lives - more OSINT.
+She lives at The Apartments at CityCenter in Washington, D.C.
 
 
-After another predetermined answer, we are asked what should never be reused across accounts. Of course, that answer is "passwords".
+After another predetermined answer, it asks what should never be reused across accounts.
+That answer is "passwords".
 
 
-Another predetermined answer, and then we are given this info:
-- 1 hour after Afomiya clicked a phishing link, someone logged into her company email.
-- Different device. Different country. Using an ancient Internet Explorer build (yes, really).
-- This isn’t casual snooping - it’s email compromise, recon, and possible data theft.
-We are told to use Authentication, Network, and Email logs, and our first task is to determine the IP used to gain access.
-This is the query I came up with first:
+Our next task is to determine the IP used to gain access.
 AuthenticationEvents
 | where username == "afstorm"
-We get 11 hits here, but with a few different IP addresses. I narrowed it down some by adding:
+There are 11 hits here, but with a few different IP addresses. I narrowed it down some by adding:
 | where result == "Successful Login"
-If we scroll over to the description column, we see just one was actually successful, from the IP of 182.45.67.89.
+Just one was actually successful, from the IP of 182.45.67.89.
 
 
-What domains are associated with this IP? Let's run this query:
+What domains are associated with this IP?
 PassiveDns
 | where ip == "182.45.67.89"
-The domains we get are: influencer-deals.net and dior-partners.com. However, we only need to enter one of those.
+The domains are: influencer-deals.net and dior-partners.com.
 
 
-Now we dig into that User-Agent thing we saw earlier. What part of the User-Agent string indicates the suspicious browser and operating system? (Submit either the browser name/version or the operating system name/version.)
-I ran this query:
+What part of the User-Agent string indicates the suspicious browser and operating system? (Submit either the browser name/version or the operating system name/version.)
 InboundNetworkEvents
 | where src_ip == "182.45.67.89"
-This should find us several (27, in fact) results, but we are just looking at the User-Agent string anyway.
+This finds several (27, in fact) results, but looking at the User-Agent string:
 Windows NT 5.2
 
 
-Now, we need to find what country the login originated from. We can use a tool here: https://lookup.icann.org/
-This tool will show us information for any IP we put in.
-China
+What country did the login originate from?
+This tool can help: https://lookup.icann.org/
+It will show us information for any IP we put in.
+Answer: China
 
 
-Now, we have the question: According to the attacker's web search history on the site, what were they trying to hack?
-We can use the previous query and just look at the URL column. If we expand it, we can see one that shows:
+According to the attacker's web search history on the site, what were they trying to hack?
 https://clouthaus.com/search=How+to+hack+an+influencer's+location+from+their+Instagram+story
+Answer: location
 
 
-Our next question is: According to another search log, what kind of personal info were they sneakily trying to uncover (and pretending to ask “for a friend”)?
-I edited the previous query to:
+According to another search log, what kind of personal info were they sneakily trying to uncover (and pretending to ask “for a friend”)?
 InboundNetworkEvents
 | where src_ip == "182.45.67.89"
 | distinct url
 | where url contains "for+a+friend"
-So we have inbound traffic, with unique URLs, where the URL shows "for a friend" (with +s for URL code).
-https://clouthaus.com/search=Afomiya+Storm+home+address??+(asking+for+a+friend)
+Ansewr: https://clouthaus.com/search=Afomiya+Storm+home+address??+(asking+for+a+friend)
 
 
-Next, we have to find out which payment platform they are trying to target:
+Which payment platform are they trying to target?
 https://clouthaus.com/search=Afomiya's+Venmo+history+–+is+that+public??
+Answer: Venmo
 
 
 Based on another search, what shady and fake event were they pretending to plan as a way to lure Afomiya?
 https://clouthaus.com/search=How+much+would+it+cost+to+hire+Afomiya+for+a+fake+birthday+party?
+Answer: Fake birthday party
 
 
 
-Next, we have to find which external email address received messages forwarded from Afomiya’s account.
-My query was:
+Next, find which external email address received messages forwarded from Afomiya’s account.
 Email
 | where sender == "afomiya_storm@clouthaus.com"
 | where subject contains "FORWARD"
 | where recipient !contains "@clouthaus"
-This query will search for emails FROM Afomiya TO addresses that are NOT clouthaus recipients. It also will search only for FORWARDed emails.
-noreply@influencer-deals.net
+Answer: noreply@influencer-deals.net
 
 
-Now, we have to find which forwarded email contained Afomiya’s payment details or direct deposit form.
-(Submit the exact subject line.)
-I used this query:
+Which forwarded email contained Afomiya’s payment details or direct deposit form? (Submit the exact subject line.)
 Email
 | where sender == "afomiya_storm@clouthaus.com"
 | where subject contains "FORWARD"
 | where subject contains "pay" or subject contains "deposit"
-Which will show forwarded emails from Afomiya with subjects containing the keyword "pay" or keyword "deposit". We get 4 results, but only one shows: [EXTERNAL] [FORWARD] Afomiya's payment details – direct deposit form
+There are 4 results, but only one shows: [EXTERNAL] [FORWARD] Afomiya's payment details – direct deposit form
 
 
-Now, we have to find which email showed a passport scan. Let's edit the same query into:
+Find which email showed a passport scan.
 Email
 | where sender == "afomiya_storm@clouthaus.com"
 | where subject contains "FORWARD"
 | where subject contains "passport"
+Answer: [EXTERNAL] [FORWARD] Afomiya's passport scan – confidential
 
 
-Next, we're looking for bank statements or year-end tax documents. Afomiya... you've sent a lot of emails with confidential information.
-Anyway, our new query is:
+Next, look for bank statements or year-end tax documents.
 Email
 | where sender == "afomiya_storm@clouthaus.com"
 | where subject contains "FORWARD"
 | where subject contains "bank" or subject contains "tax"
-We get 2. I entered: [EXTERNAL] [FORWARD] Re: Tax documents – year-end summary
+There are 2. I entered: [EXTERNAL] [FORWARD] Re: Tax documents – year-end summary
 
 
-Now, we just have to select what we think the attacker's goal was:
+Now, I just have to select what I think the attacker's goal was:
 Identity theft
 Financial fraud
 Espionage on her brand contacts
 Long-term access for future "shady business"
 All of the above
-I think we can safely say that the attacker's goal was all of the above, based on our entire investigation.
+I think I can safely say that the attacker's goal was all of the above, based on the entire investigation.
