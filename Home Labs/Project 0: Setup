@@ -1,5 +1,5 @@
 OBJECTIVE
-My goal here is to learn more about how to practically apply the tools and knowledge I've learned. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Wazuh.
+My goal is to learn more about how to practically apply the tools and knowledge I've learned in educational environments. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Wazuh.
 
 TOOLS USED
 - VMWare
@@ -9,6 +9,7 @@ TOOLS USED
 
 Future Plans:
 WhoIs, VirusTotal, & emailheaderanalyzer.com for email investigations
+Simulated attacks & review
 
 KEY TAKEAWAYS
 I learned how to:
@@ -18,18 +19,21 @@ Scan the new network with nmap/Zenmap (Project 2)
 Run a vulnerability scan with Wazuh (Project 3)
 Troubleshoot install, connectivity, and authentication issues
 
-This is an excellent learning experience, and I hope to continue to build on it in the future. I am sure that the skills I have developed here will translate well into a professional environment, particularly the troubleshooting skills and puzzle solving.
-
 SETUP
-First I had to get all my virtual machines installed and ready before I could use them to practice. I set easily recognizable names for each VM so I could tell them apart if I'm connecting from one to the other. I then put them all on 1 virtual network, with the Server VM having a second NIC for NAT with the host, as well. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example.
-After installing all of the OSs, I had to set up the Server VM with Active Directory, DHCP, and DNS so I can add all of the computers to a domain. Once the features are installed, I need to promote the server to domain controller.
-While promoting to domain controller, I ran into an issue because the Admin password was weak. "net user Administrator [password]" fixes that. Once that was complete, I went into Active Directory Users & Computers and set up a few accounts, just so I can have something to play around with later.
-I also got a warning that the server didn't have a static IP, so I gave it an easy to remember (for me) IP and subnet mask. I also pointed the gateway/preferred DNS to itself. For DHCP configuration, I pointed it to my admin credentials (which I set up a new user for, rather than the default Admin account). Next, I set up a new scope and gave it an easy range, set the router IP to the static IP for the server, and activated.
-Finally, I needed Routing and Direct Access so the server can properly route traffic. I opened the Routing and Remote Access tool menu, selected NAT, and then pointed it to the externally-facing NIC. The internal NIC is strictly to connect with the client VMs, the external one controls access to the outside world.
-I then added everything to the AD domain. In Windows, I have to go into the Network Settings and set the DNS server to the IP of the Server machine. From there, I go to Account settings, Access work or school, join to a local AD domain, and adding it to the domain. I had to input credentials of a domain admin to allow it on the domain.
-Kali was next to add to the domain, and it requires more configuration to do so. First, I had to update/upgrade the system and set the DNS to the domain controller again. Then, I had to install several packages to allow me to join Kali to the domain. For simplicity, here is a command that does all of them:
+NETWORK CONFIGURATION
+First I had to get all my virtual machines installed and ready before I could use them to practice. I set easily recognizable names for each VM so I could tell them apart if I'm connecting from one to the other. I then put them all on 1 virtual network, with the Server VM having a second NIC for NAT with the host, as well. This will improve security because it will allow traffic from client VMs to be isolated until it goes through the server. Finally, I also set up VMWare Tools on each machine, so I can copy & paste between my host and the VM, for example.
+
+SERVER INITIALIZATION
+After installing all of the OSs, I had to set up the Server VM with Active Directory, DHCP, and DNS so client systems can be added to a domain and traffic can be appropriately managed. Once the features are installed, promotion of the server to domain controller was necessary. This allows for centralized management and enforcement of security through managed access to resources.
+While promoting to domain controller, I received an alert that the Admin password was weak. "net user Administrator [password]" fixes that. This is an important step because many admin accounts are high priority targets, and default Admin passwords can be found online. (I also then disabled that default Admin account, to confirm further that it could not be targeted.) Once that was complete, I configured a few accounts so I can have something to potentially attack (and discover) later.
+There was a second alert that the server didn't have a static IP. A static IP is necessary for this server because all client traffic will flow through it. The client VMs need a definite way to reach the server as a dynamic IP could create issues with routing. Static IPs and subnet masks were configured to ensure reliable routing of traffic. There was also a requirement to set the gateway/preferred DNS to itself. For the DHCP configuration, I pointed it to my admin credentials (which I set up a new user for, rather than the default Admin account). Next, the scope was configured and the router IP was set to the static IP for the server.
+Finally, I needed Routing and Direct Access so the server can properly route client traffic. NAT configuration was pointed to the externally-facing NIC. This ensures that traffic going through the server is then directed to the external NIC for routing to the outside world.
+
+ADDING CLIENTS TO THE DOMAIN
+I then added everything to the AD domain. In Windows, the DNS server must be set to the IP of the server machine. From there, the workstation can be added to the domain. This will allow more granular control of the account and computer from one centralized area - the server. Domain admin credentials were required to authorize the join.
+Kali was next to add to the domain, and it requires more configuration to do so. First, updating and upgrading the system ensures I am working with the latest (and most secure) versions of packages installed. DNS was also configured to point to the domain controller. Then, several packages were installed to allow me to join Kali to the domain. For simplicity, here is a command that does all of them:
 sudo apt -y install realmd libnss-sss libpam-sss sssd sssd-tools adcli samba-common-bin oddjob oddjob-mkhomedir packagekit
-From there, I have to make sure the AD domain is discoverable on Kali:
+From there, ensure that the AD domain is discoverable and therefore usable on Kali:
 sudo realm discover [domain]
 And finally:
 sudo realm join --user=[domain admin account] [domain]
