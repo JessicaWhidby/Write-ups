@@ -1,5 +1,6 @@
-Well, I've already done 102 (and I think 101 in a prior module), so this shouldn't be too bad.
+This is a simple introduction to the KQL language.
 
+https://kc7cyber.com/challenges/830#
 
 Section 1: Tables, Ladders, and Data!
 Which table would tell us if an employee received a suspicious email?
@@ -28,7 +29,6 @@ What column contains information about an employee's job title?
 Role
 
 How many pharmacists work at our company?
-And we are given:
 Employees
 | where role == "Pharmacist"
 Answer: 19
@@ -36,13 +36,11 @@ Answer: 19
 
 Section 3: Commands & Operators: The Finishing Moves
 How many employees work at our company?
-And we were just told about the count command, so:
 Employees
 | count
 Answer: 321
 
 How many distinct employee roles do we have at our company?
-And we were just told about distinct, so:
 Employees
 | distinct role
 Answer: 23
@@ -54,32 +52,27 @@ Employees
 Answer: 2
 
 What is Noemi's email address?
-Given:
 Employees
 | where name == "Noemi Tep"
 Answer: noemi_tep@jojoshospital.org
 
 What is the name of the exact role?
-Given:
 Employees
 | where role contains "security"
 Answer: Security Officer
 
 How many emails did we receive that have the word health in the subject?
-Given:
 Email
 | where subject has "health"
 Answer: 613
 
 Who is the sender for the last external email received by Noemi?
-Given:
 Email
 | where recipient == "noemi_tep@jojoshospital.org"
 | where sender !contains "jojoshospital"
 Answer: skirmishes.converts@yandex.com
 
 How many failed login attempts were there from this IP address?
-Given:
 AuthenticationEvents
 | where src_ip == "10.10.0.144" and result == "Failed Login"
 Answer: 59
@@ -89,20 +82,20 @@ AuthenticationEvents
 | where src_ip == "10.10.0.144" or src_ip == "10.10.0.86"
 Answer: 131
 
-We can simplify this using in. We use the parentheses here to turn the IPs into a list.
+We can simplify this using in.
 AuthenticationEvents
 | where src_ip in ("10.10.0.144", "10.10.0.86", "10.10.0.86", "10.10.0.20", "10.10.0.109")
 How many failed login attempts were from these IP addresses?
-Add in:
+Adding in this clause will filter only the results that were failed:
 | where result contains "Failed"
 Answer: 169
 
 How many distinct websites(urls) did Nancy Roberts visit?
-This one introduced us to pivoting, so let's find her IP first:
+This one introduced us to pivoting. Find Nancy's IP first:
 Employees
 | where name == "Nancy Roberts"
 10.10.0.30
-Then, let's take that as a source IP in OutboundNetworkEvents and find DISTINCT URLs she visited:
+Then, take that as a source IP in OutboundNetworkEvents and find DISTINCT URLs she visited:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.30"
 | distinct url
@@ -119,7 +112,6 @@ OutboundNetworkEvents
 Answer: 668
 
 How many authentication attempts did we see to the accounts of employees with the first name Mary?
-We were given a template, and filled in, it amounts to:
 let mary_auth = 
 Employees
 | where name has "Mary"
