@@ -1,2 +1,7 @@
-FIRST PROJECT
-To start with, I figured I would login to Kali with my fancy new AD credentials (username@DOMAIN.EXAMPLE in the username field) and try to get a network map with Zenmap. I used the default nmap -A -T4 scan, with the network info added in to the end of the command. I won't show the image here, but I will say it successfully found the other hosts (the server and the Windows 10 machine (this is before I realized I needed Ubuntu for Wazuh, so it wasn't on the network yet)), identified open ports, and identified the OS (within reasonable margin of error). It gives a nice rundown of everything it finds under Host Details of each host (which can be found on the left pane). Overall, very neat way to map my own network and see what it's got going on. It will likely be a big help in future projects to be able to refer back to this topology.
+My first project was to scan my newly created network. To start with, I used AD to login to Kali (username@DOMAIN.EXAMPLE in the username field). The default scan was used, nmap -A -T4 [domain], which scans for available hosts and ports, enables OS detection, and allows for more aggressive/faster performance.
+
+Zenmap did successfully discover every endpoint in the environment, identified open ports, and identified the OS (within reasonable margin of error). It gives a summary of everything it finds under Host Details of each host (which can be found on the left pane). There is also a topological map provided for visual reference.
+
+The results of this scan verify that my setup (DNS, routing, domain control) in the previous project is working as intended.
+
+Overall, this was auseful way to map my own network and visually see the relationships. It will likely be a big help in future projects to be able to refer back to this topology. From an adversarial perspective, enumeration like this would also help with deciding which vulnerabilities could or should be potentially exploited.
