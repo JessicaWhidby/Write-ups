@@ -1,4 +1,7 @@
-Alright, let's dive into Blue Team Labs Online! Starting with an easy one, Follina, we are given an infected zip file to analyze.
+I am starting my BTLO labwork with an easy one, Follina. 
+https://blueteamlabs.online/home/challenge/follina-f1a3452f34
+
+We are given an infected zip file to analyze.
 
 Question 1) What is the SHA1 hash value of the sample? (Format: SHA1Hash)
 The password for the archive is given to us next to the download button, so extract using password "infected".
