@@ -41,7 +41,7 @@ The website directories hidden from the public could serve as an unauthorized ac
 A few packets before the previous answer, using the same method (translating the URL and then the hex of the table name), a table called "admin" is discovered.
 
 Knowing which credentials were used allows us to determine the extent of account compromise. What are the credentials used by the attacker for logging in?
-Start by searching for "username=admin" in Wireshark. The last login request will be the successful one (because why would you keep trying after you were right?). This leads to packet 88699, which shows the credentials of admin:admin123!
+Start by searching for "username=admin" in Wireshark. The last login request will likely be the successful one. This leads to packet 88699, which shows the credentials of admin:admin123!
 
 We need to determine if the attacker gained further access or control of our web server. What's the name of the malicious script uploaded by the attacker?
 It has to be after that packet, and it has to be an HTTP POST. The very next POST packet is 88757, and analyzing the packet bytes, the answer is uncovered:
