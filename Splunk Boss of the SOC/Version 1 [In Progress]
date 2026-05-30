@@ -1,0 +1,24 @@
+We Site Defacement -
+What is the likely IPv4 address of someone from the Po1s0n1vy group scanning imreallynotbatman.com for web application vulnerabilities?
+For this one, I initially just queried: "imreallynotbatman.com". The left pane showed 4 hosts identified: suricata-ids.waynecorpinc.local, splunk-02, 192.168.250.1, we1149srv.
+Sources starting with 192.168 would be internal. I also hypothesized that splunk-02 would be internal. suricata-ids.waynecorpinc.local ends with .local, also indicating that it is internal, but I checked the IP to be sure anyway. It was also a 192.168 IP, so the last option is we1149srv. I clicked that host and was shown an IP of 40.80.148.42.
+
+What company created the web vulnerability scanner used by Po1s0n1vy? Type the company name.
+My next query was to filter on the previous IP, so: "imreallynotbatman.com" src_ip=40.80.148.42
+I analyzed the first log and didn't see anything that immediately stood out as a potential scanner. However, looking at the second log, I see:
+Acunetix-Product: WVS/10.0 (Acunetix Web Vulnerability Scanner - Free Edition)
+Acunetix-Scanning-agreement: Third Party Scanning PROHIBITED
+Researching Acunetix, it appears to be the vulnerability scanner I'm looking for.
+
+What content management system is imreallynotbatman.com likely using?
+In that same log, I see this string: http://imreallynotbatman.com/joomla/index.php/component/search/?searchword=&ordering=alpha&searchphrase=all&areas[0]=
+Joomla seems like an interesting name, so I researched it, and it is indeed a content management system.
+
+What is the name of the file that defaced the imreallynotbatman.com website? Please submit only the name of the file with extension?
+I now pivoted to look for POST requests sent to the website. If an attacker is going to deface a website, they will likely need to upload their malicious document. I had to research how exactly to form this query, but this is what I ended up running:
+"imreallynotbatman.com" src_ip=40.80.148.42 "POST" url IN ("*jpg, *doc*)
+This gave 29 results, so my first attempt was to check the first result given: win.ini.jpg
+That was incorrect, so I analyzed the logs further. After looking at the statics for URLs, I noticed that's the only one in these results. From there, I pivoted to get rid of the POST filter. Perhaps it will show the information of them pulling the information instead of when they posted it. I saw a URL then of imnotbatman.jpg, which seemed promising, but unfortunately, was still not the correct answer. Then, I figured, if the request would be pulling from the site, then the DESTINATION IP would be what I filter the given IP on. Next, I found some_inexistent_file_with_long_name_00.jpg, but alas, still not correct. I kept getting a more and more complex query because I was trying to search FOR "jpg" and "doc" BUT NOT the strings we've already confirmed to be incorrect.
+Finally, I decided to wait just a couple minutes for the hint to become available. It said, "First find the IP address of the web server hosting imreallynotbatman.com." So, I found the imreallynotbatman.com has the IP of 192.168.250.70.
+My new query was: src_ip=40.80.148.42 AND dest_ip=192.168.250.70 AND filename="*jpg"
+I did this with the intent to iterate through common filetypes.
