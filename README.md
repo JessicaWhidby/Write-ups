@@ -27,4 +27,6 @@ KC7 focuses on KQL querying to gather the information. I gained hands-on phishin
 
 LetsDefend has helped me practice more phishing email attack simulations.
 
+Splunk Boss of the SOC was created by Splunk as a CTF-style challenge following a web defacement. However, it is largely user-led rather than having several questions lead the way.
+
 On TryHackMe, I conducted an introduction to phishing challenge there, this time using Splunk SIEM and triaging alerts as they came in. I used Autopsy in a forensic analysis. I also went through their Juicy Details CTF. This required log analysis with a text editor to open the logs.
