@@ -1,0 +1,74 @@
+This scenario simulates a phishing attack as it unfolds in real time. The objectives are:
+
+Monitor and analyse real-time alerts as the attack unfolds.
+Identify and document critical events such as PowerShell executions, reverse shell connections, and suspicious DNS requests.
+Create detailed case reports based on your observations to help the team understand the full scope of the breach.
+
+
+
+ALERT 1 - SUSPICIOUS EMAIL FROM EXTERNAL DOMAIN
+Sender: eileen@trendymillineryco.me
+The body of the email uses tactics of urgency and promise of monetary gain to gather sensitive information (banking details). These are very commonly used tactics in phishing attempts. The unusual sender domain combined with the phishing tactics make this suspicious, and this is a true positive. The SOC lead sent the alert to us stating that the rule needs fine tuning.
+I classified this as a true positive in my report. The recommended action is to blocking the sender's domain at the email filter. If there were any links or attachments to open, recommendations would also include additional investigation of the account and the host to see if any related activity (suspicious processes, suspicious network activity, suspicious logins, etc) has occurred. 
+
+ALERT 2 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+TrustedInstaller.exe is executing with a parent of services.exe. The process's working directory is C:\Windows\system32\, which is suspicious when combined with the fact that "Trusted" is in the process name. This process was run at 05/30/2026 20:04:51.219 on the win-3459 machine, which belongs to Michelle in Legal. The legal department is also a commonly targeted department as they usually have elevated privileges and access to sensitive information.
+This was classified as a true positive due to it running from a directory that doesn't normally run 3rd party tools. This indicates suspicious activity, especially when the executable also claims to be Trusted in the name. This is meant to deter the average user from investigating further. The recommendation is to block/kill the process.
+
+TRIAGE AND ALERT 3 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+After closing the previous alert, there were 3 more incoming alerts. They consisted of another suspicious parent-child relationship and 2 more suspicious emails. The suspicious process alert has a higher likelihood of affecting the organization, so it gets triaged first.
+This relationship is taskhostw.exe running with a parent of svchost.exe. It also had a CLI command of: taskhostw.exe KEYROAMING. The timestamp of this activity was at 05/30/2026 20:07:15.219 and was executed on win-3451 (which belongs to Miguel in Sales).
+After investigation, this is likely a benign process running a background service.
+
+ALERT 4 - SUSPICIOUS ATTACHMENT IN EMAIL
+There were still 2 other suspicious emails waiting, but this one was triaged above those as a suspicious attachment is more likely to involve interaction. Subsequently, it also is likely to have a more disastrous effect on the organization if interacted with.
+The subject is: FINAL NOTICE: Overdue Payment - Account Suspension Imminent
+This is already raising red flags because this is URGENTly asking for MONEY with THREAT of account suspension.
+john@hatmakereurope.xyz is the sender. .xyz domains can be used legitimately, but also maliciously. This entirely depends on context.
+It targeted michael.ascot@tryhatme.com who is the CEO, the PRIME high profile target.
+And the attachment is a zip: ImportantInvoice-Febrary.zip. An invoice would typically be a .doc or .pdf. A zip folder indicates there are going to be other files in the folder, which is potentially malicious.
+The timestamp on this email was 05/30/2026 20:12:35.219, which may be needed later for correlation and timeline development.
+The recommendation is to block the sender at the email filter and investigate the CEO's workstation for evidence of interaction with the attachment.
+
+ALERT 5 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+my mind immediately went to the need to check if these were run on the CEO's computer and when.
+The first process is rdpclip.exe with a parent of svchost.exe (not the normal parent) and a timestamp of 05/30/2026 20:13:47.219. Merely one minute after the suspicious email was received, the CEO's workstation is seen running this process. In itself, the process is only moderately suspicious, based on the parent process. However, combined with the fact that it came almost immediately after a likely click on a potentially malicious attachment, makes this highly suspect.
+This process needs to be killed and the host analyzed for further IOCs. Another recommendation is to isolate the host, as potentially malicious activity is now being seen.
+
+ALERT 6 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+This alert has the same information as the CEO's potential attack, but on the win-3453 machine, which belongs to Sales. This happened at 05/30/2026 20:17:17.219, just a few minutes after the previous alert. Again, it is rdpclip.exe with a parent of svchost.exe. This is not the original parent process of rdpclip.exe, and it is the same thing that was just run on the CEO's computer, so this is moderately suspicious, as well. This could be an indicator that an infection is spreading throughout the network. Recommendation is to isolate this host, as well.
+
+ALERT 7 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+At 05/30/2026 20:14:37.219, takehostw.exe was seen running with a parent process of svchost.exe on the win=3451 workstation (Sales). There was a CLI command run, stating: taskhostw.exe KEYROAMING. After investigation, it was determined that this is a false positive. This parent-child process relationship can actually be benign and the KEYROAMING argument does not seem suspicious in itself, either.
+
+ALERT 8 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+At 05/30/2026 20:26:06.219 and on win-3459 (Michelle in Legal), svchost.exe was seen running with a parent process of services.exe. The CLI shows: C:\Windows\system32\svchost.exe -k wsappx -p. This was also classified as a false positive, as this is a normal process relationship.
+
+ALERT 9 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+In the background, there are now 4 suspicious emails. However, triage analysis dictates that I need to continue looking at the suspicious processes first. 2 of these suspicious processes seem to be related: WUDFHost.exe with a parent of services.exe, at timestamps of 05/30/2026 20:16:29.219 and 05/30/2026 20:20:33.219. Both were run on win-3455 (Sales).
+The CLI for event 1 shows:  "C:\Windows\System32\WUDFHost.exe" -HostGUID:{eaa41944-3811-4056-972f-add85d3bfc01} -IoEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-fd5c32fb-5bb6-4693-82a7-6cec85d58bc4 -SystemEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-3ba97dd6-3700-4e8a-8921-1e24128d9c7d -IoCancelEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-2a6ae716-7c20-4d0c-97b6-bb3346775edf -NonStateChangingEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-54470b14-46b9-4c56-abe1-d9b12ef13c5f -LifetimeId:39d16a20-5092-495b-95b9-c7e0ec216f0f -DeviceGroupId: -HostArg:0.
+The CLI for event 2 shows: "C:\Windows\System32\WUDFHost.exe" -HostGUID:{24b7eef1-ada5-453b-a5a6-93007dca6fbc} -IoEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-fd5c32fb-5bb6-4693-82a7-6cec85d58bc4 -SystemEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-3ba97dd6-3700-4e8a-8921-1e24128d9c7d -IoCancelEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-2a6ae716-7c20-4d0c-97b6-bb3346775edf -NonStateChangingEventPortName:\UMDFCommunicationPorts\WUDF\HostProcess-54470b14-46b9-4c56-abe1-d9b12ef13c5f -LifetimeId:39d16a20-5092-495b-95b9-c7e0ec216f0f -DeviceGroupId: -HostArg:0
+These look scary at first, but they are actually benign. After investigation, it was discovered that the parent process of WUDFHost.exe is typically svchost.exe, while the parent listed here is services.exe. However, the parent of svchost is services, so this is not unusual.
+
+ALERT 10 - SUSPICIOUS EMAIL FROM EXTERNAL DOMAIN
+I performed a quick triage analysis of these, as several suspicious parent-child process relationships came up while investigating the first email. After a short analysis, it is determined that, while these are likely suspicious (containing phishing tactics such as urgency and promise of money), they do not contain links or attachments. I left these in the queue for further investigation of the sender domain later and moved onto the High priority process alerts.
+
+ALERTS 11-20 - SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP
+There were 10 of these High priority alerts in total. They were all the same process (nslookup) on the same machine (CEO's workstation) with slightly altered command lines. 
+10 commands were run between 05/30/2026 20:37:45.219 -  05/30/2026 20:38:01.219, which is about 16 seconds total. Multiple commands being run within extremely quick succession suggests potential automation, which would likely have been prompted by a remote malicious actor. Additionally, all of the lookups were to encoded URLs at domains like haz4rdw4re.io. For example: UEsDBBQAAAAIANigLlfVU3cDIgAAAI.haz4rdw4re.io. This looks highly suspect. That encoded portion being queried actually decrypts to a PZIP archive itself, as well. This all signals potential command and control (C2). The host should be isolated immediately to prevent further spread of this infection. 
+
+ALERTS 21-24 - NETWORK DRIVE DISCONNECTED, SUSPICIOUS PARENT-CHILD PROCESS RELATIONSHIP, NETWORK DRIVE MAPPED TO LOCAL DRIVE, and POWERSHELL SCRIPT IN DOWNLOADS FOLDER
+These were also all on the CEO's workstation, which prompted immediate triage. If we read them backwards (in the order they were alerted rather than the order listed in the SIEM), a PowerShell script was downloaded (likely from one of the domains looked up previously), a network drive (these usually contain important information) was mapped to the CEO's computer, a suspicious process was run (robocopy.exe run from PowerShell), and then the drive was disconnected.
+The network drive mapped and then disconnected was: "C:\Windows\system32\net.exe" use Z: \\FILESRV-01\SSF-FinancialRecords
+Additionally, this command was run as part of the suspicious process relationship: "C:\Windows\system32\Robocopy.exe" . C:\Users\michael.ascot\downloads\exfiltration /E
+All 4 of these alerts came in within under 3 minutes, from first to last.
+A timeline is starting to come together, from phishing email to C2 traffic, to exfiltration.
+Data exfiltration confirmed based on the network drive accessed and the robocopy and exfiltration command run. The recommendation is to isolate the host IMMEDIATELY to prevent further damage and start the incident response plans.
+
+FINAL RESULT AND RECOMMENDATIONS
+The CEO of the company received a suspicious (phishing) email with a ZIP folder attached. Suspicious activity was then seen on his workstation, such as 10 nslookup commands to encoded URLs within the span of 16 seconds. This indicated potential command and control (C2) activity. Then, it is alerted and confirmed that a PowerShell script was downloaded, a network drive containing financial records was mapped to his workstation, data exfiltration occurred, and finally, the network drive was disconnected. All of these events happened very quickly. It was recommended to isolate his workstation from the network to prevent further spread and immediately activate incident response plans. 
+
+TRYHACKME'S SCORING
+Victory! Security breach prevented!
+You passed the scenario by identifying all true positive alerts. Your MTTR and dwell time were longer than average, with a true positive rate of 61.1%, which is an improvement from previous runs. The "Execution" alert took notably longer to close.
+For a first time through this scenario, I am happy that I identified all true positives, even it means a few false positives were escalated in the mix. I would personally rather close a benign alert that was escalated as true positive than miss a true positive in the mix of everything else. Additionally, my MTTR and dwell time are probably so high (3-5 minutes) because I was also writing up this report as I went, so that doesn't concern me much in this case.
