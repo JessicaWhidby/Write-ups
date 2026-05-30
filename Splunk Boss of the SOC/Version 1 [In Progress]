@@ -1,4 +1,4 @@
-We Site Defacement -
+Web Site Defacement -
 What is the likely IPv4 address of someone from the Po1s0n1vy group scanning imreallynotbatman.com for web application vulnerabilities?
 For this one, I initially just queried: "imreallynotbatman.com". The left pane showed 4 hosts identified: suricata-ids.waynecorpinc.local, splunk-02, 192.168.250.1, we1149srv.
 Sources starting with 192.168 would be internal. I also hypothesized that splunk-02 would be internal. suricata-ids.waynecorpinc.local ends with .local, also indicating that it is internal, but I checked the IP to be sure anyway. It was also a 192.168 IP, so the last option is we1149srv. I clicked that host and was shown an IP of 40.80.148.42.
