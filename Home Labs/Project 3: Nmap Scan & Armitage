@@ -1,0 +1,16 @@
+PURPOSE
+The intent behind this lab is to launch a real attack (on my own VM) and see if I can retrace what happened via Wazuh logs. The best way to learn is by doing, so I want to see what I can learn.
+
+ARMITAGE INSTALL 
+First, I had to get Armitage running. All of this is possible to do through the Metasploit via CLI (I learned this in a recent SANS course), but Armitage GUI makes it easier. I needed to install Armitage, and after doing so, I launched Armitage. It asked which host I would like to run it against, and interestingly, Ubuntu refused the connection. I verified that the two machines can actuall talk to each other (via ping), so there were no network issues.
+
+VERIFICATION IN WAZUH
+However, what I can see in Wazuh so far is that Armitage was installed. Right there at the top, a new medium alert came in showing:
+data.package: armitage
+With a status of installed. This means that Wazuh is indeed detecting that new things are being installed, and the rule level was 7. According to Wazuh's documentation, this means that a keyword was triggered and likely signifies a security issue.
+
+NMAP SCAN
+Knowing that Wazuh can reach Kali and vice versa, and that Wazuh knows something suspicious may be incoming, I decided to run an Nmap scan on the Ubuntu machine. This would be good to tell me which ports are available to potentially use Armitage on, since the default value did not work. While that didn't trigger any directly correlated alerts, it did send a level 3 alert that sudo was used. Wazuh states that a level 3 alert shows successful events, such as successful logins or firewall allows.
+
+SECOND ATTEMPT AT ARMITAGE & INTERESTING ALERT IN WAZUH
+This time, using a port that Nmap identified, I was able to get Armitage to connect. I disabled the firewall on Ubuntu to make this a little bit easier, and more intentionally vulnerable. Wazuh did also catch that, but only at level 3. It did show the command used and tell me that root was logged into (sudo used), the firewall disable was run, and then the connection was closed. While waiting for Armitage to fully open the connection, a log came into Wazuh that seemed interesting. It showed netstat listening ports on Ubuntu. I never ran such a command, so I believe it is being logged because a port is being used for Armitage to connect to. It does show as a level 7 alert.
