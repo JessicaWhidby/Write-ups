@@ -20,5 +20,41 @@ I now pivoted to look for POST requests sent to the website. If an attacker is g
 This gave 29 results, so my first attempt was to check the first result given: win.ini.jpg
 That was incorrect, so I analyzed the logs further. After looking at the statics for URLs, I noticed that's the only one in these results. From there, I pivoted to get rid of the POST filter. Perhaps it will show the information of them pulling the information instead of when they posted it. I saw a URL then of imnotbatman.jpg, which seemed promising, but unfortunately, was still not the correct answer. Then, I figured, if the request would be pulling from the site, then the DESTINATION IP would be what I filter the given IP on. Next, I found some_inexistent_file_with_long_name_00.jpg, but alas, still not correct. I kept getting a more and more complex query because I was trying to search FOR "jpg" and "doc" BUT NOT the strings we've already confirmed to be incorrect.
 Finally, I decided to wait just a couple minutes for the hint to become available. It said, "First find the IP address of the web server hosting imreallynotbatman.com." So, I found the imreallynotbatman.com has the IP of 192.168.250.70.
-My new query was: src_ip=40.80.148.42 AND dest_ip=192.168.250.70 AND filename="*jpg"
-I did this with the intent to iterate through common filetypes.
+My new query was: src_ip=192.168.250.70 dest_ip=40.80.148.42 filename="*jpg"
+I did this with the intent to iterate through common filetypes. That also returned nothing new. I researched for a nudge, and discovered a lot of people sorting by sourcetype="stream:http". That makes sense, we are looking at web traffic to servers. I added in the source IP as the one for the server, and the first result is: poisonivy-is-coming-for-you-batman.jpeg
+(My final query was: sourcetype="stream:http" src_ip=192.168.250.70)
+
+This attack used dynamic DNS to resolve to the malicious IP. What fully qualified domain name (FQDN) is associated with this attack?
+Interestingly, the line right below where we foundthe previous answer shows a host of: prankglassinebracket.jumpingcrab.com
+
+What IPv4 address has Po1s0n1vy tied to domains that are pre-staged to attack Wayne Enterprises?
+My first thought was to search up that previous domain, so my query was: url="prankglassinebracket.jumpingcrab.com*" (to include any URLs going to that domain in general). I saw one IP correlated to this, which was 23.22.63.114.
+
+What IPv4 address is likely attempting a brute force password attack against imreallynotbatman.com?
+My initial query was:  imreallynotbatman.com "*pass*" (to include pass or password at any point in the log). This returned 15,000+ events, but if we go to src, there are 3 results. One of those is the internal URL for imreallynotbatman.com, the other 2 are the malicious ones we've seen already. So I just tried each one, and the answer was 23.22.63.114.
+
+What is the name of the executable uploaded by Po1s0n1vy?
+First attempt at analysis on this question was to query:
+(src_ip=23.22.63.114 OR src_ip=40.80.148.42) "*exe*"
+This showed 2 results by filename: /_vti_bin/shtml.exe and 3791.exe
+3791.exe was the correct answer.
+
+What is the MD5 hash of the executable uploaded?
+I added the previous answer to the filter (removed the "*exe*" and added filename=3791.exe), but that only returned the previous log and nothing else. No hash values there.
+Next, I tried removing that clause entirely and just having: (src_ip=23.22.63.114 OR src_ip=40.80.148.42) "3791.exe", to search for that filename in anything. This did give only 2 results, but neither of them showed a hash of any sort. I then realized I was technically still filtering web traffic only. I wondered if it was possible this filename showed up anywhere else, so I removed the entire src_ip clause, and that returned 76 results. I added in a filter for "MD5", but that was still 67 unique results. I saw that some of the results were coming from sysmon, so I figured I would add that to the filter. I saw filtering on command line commands was an option, so this is the final query I had:
+index="botsv1" sysmon CommandLine="3791.exe"
+That only returns 1 MD5 hash: AAE3F5A29935E6ABCC2C2754D12A9AF0
+
+GCPD reported that common TTPs (Tactics, Techniques, Procedures) for the Po1s0n1vy APT group, if initial compromise fails, is to send a spear phishing email with custom malware attached to their intended target. This malware is usually connected to Po1s0n1vys initial attack infrastructure. Using research techniques, provide the SHA256 hash of this malware.
+I plugged the previous MD5 hash into VirusTotal, and it gives a SHA256 hash of: ec78c938d8453739ca2a370b9c275971ec46caf6e479de2b2d04e97cc47fa45d
+However, that specific file seems to not be what they were looking for, so I pivoted to searching the IPs. I put in the IP of 23.22.63.114 and went to relations to find related files. The first one, software.exe, also gives the wrong hash. However, MirandaTateScreensaver.scr.exe (which, in hindsight, seems like a more suspicious name anyway), gave the correct hash value: 9709473ab351387aab9e816eff3910b9f28a7a70202e250ed46dba8f820f34a8
+
+What special hex code is associated with the customized malware discussed in question 111?
+I wasn't quite sure what hex code they could be referring to, so I went to the Community tab. I saw this one in the comments initially: 4e 65 6c 20 6d 65 7a 7a 6f 20 64 65 6c 20 63 61 6d 6d 69 6e 6f 20 64 69 20 6e 6f 73 74 72 61 20 76 69 74 61 20 6d 69 20 72 69 74 72 6f 76 61 69 20 70 65 72 20 75 6e 61 20 73 65 6c 76 61 20 6f 73 63 75 72 61
+But that wasn't what they were looking for. The next one in the comments was: 53 74 65 76 65 20 42 72 61 6e 74 27 73 20 42 65 61 72 64 20 69 73 20 61 20 70 6f 77 65 72 66 75 6c 20 74 68 69 6e 67 2e 20 46 69 6e 64 20 74 68 69 73 20 6d 65 73 73 61 67 65 20 61 6e 64 20 61 73 6b 20 68 69 6d 20 74 6f 20 62 75 79 20 79 6f 75 20 61 20 62 65 65 72 21 21 21
+
+What was the first brute force password used?
+This hint was already revealed, I assume from taking so long so far:
+Login attempts will use the HTTP POST method, and they will include some obvious fields that you can search for in the form_data field of stream:http events.
+So I built my query around that, and this is what I came up with:
+dest_ip=192.168.250.70 sourcetype="stream:http" "POST" "*pass*"
