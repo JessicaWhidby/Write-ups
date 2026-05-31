@@ -5,3 +5,8 @@ Zenmap did successfully discover every endpoint in the environment, identified o
 The results of this scan verify that my setup (DNS, routing, domain control) in the previous project is working as intended.
 
 Overall, this was auseful way to map my own network and visually see the relationships. It will likely be a big help in future projects to be able to refer back to this topology. From an adversarial perspective, enumeration like this would also help with deciding which vulnerabilities could or should be potentially exploited.
+
+NEXT STEPS
+Deploy and configure Wazuh
+Conduct a vulnerability scan
+Research, prioritize, and remediate findings
