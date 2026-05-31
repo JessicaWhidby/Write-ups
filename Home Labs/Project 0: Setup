@@ -42,7 +42,3 @@ Ubuntu will largely follow a similar process, and this will be used for our Wazu
 
 NEXT STEPS
 Scan the network and create a network diagram
-Deploy and configure Wazuh
-Conduct a vulnerability scan
-Research, prioritize, and remediate findings
-Simulate an attack and find evidence in logs
