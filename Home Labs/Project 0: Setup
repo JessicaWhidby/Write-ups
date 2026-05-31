@@ -45,3 +45,4 @@ Scan the network and create a network diagram
 Deploy and configure Wazuh
 Conduct a vulnerability scan
 Research, prioritize, and remediate findings
+Simulate an attack and find evidence in logs
