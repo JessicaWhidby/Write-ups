@@ -15,9 +15,10 @@ KEY TAKEAWAYS
 I learned how to:
 Configure a virtual network, including use of DNS, DHCP, and routing
 Deploy an AD domain and add users and computers
-Scan the new network with nmap/Zenmap (Project 2)
-Run a vulnerability scan with Wazuh (Project 3)
+Scan the new network with nmap/Zenmap to create a network diagram (Project 1)
+Run a vulnerability scan with Wazuh (Project 2)
 Troubleshoot install, connectivity, and authentication issues
+Launch a simulated attack and find evidence in Wazuh logs (Project 3)
 
 SETUP
 NETWORK CONFIGURATION
