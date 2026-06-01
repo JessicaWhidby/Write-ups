@@ -286,12 +286,15 @@ InboundNetworkEvents
 | where url contains "money"
 Answer: https://azurecresthospital.med/news/roy-trenemman-joins-azure-crest-to-save-money-on-erp-systems
 (HOWEVER - this answer is not working on the site currently.)
+(Edit: after coming back to this, I noticed the link had "news" in the URL. I then adjusted the query to read "where url contains "news"" instead, and found:
+https://azurecresthospital.med/news/half-of-it-department-fired)
 
 Which employee was hired as part of an effort to reduce costs?
 Roy Trenneman
 
 What article did Azure Crest publish about building one's own stuff instead of paying for it? (provide the full url)
-[In progress]
+Using the same query from 2 above (filtering on "news'), this article was also listed a few more results down:
+https://azurecresthospital.med/news/research/why-pay-for-expensive-erp-systems-when-you-can-run-your-own
 
 While conducting reconnaissance, the threat actor also tried to get information about the juicy targets they were after. What specific type of medical records was the Threat Actor attempting to access on Azure Crest Hospital’s internal share?
 InboundNetworkEvents
@@ -386,7 +389,7 @@ Which encryption algorithm is commonly used for securing web traffic, especially
 More OSI: TLS
 
 What is the CVE ID for the RCE vulnerability that was disclosed in the PaperCut application in early 2023?
-[My answer isn't working, so I'll come back]
+General open source intelligence skills here - CVE-2023-27350
 
 In this kind of attack, an adversary floods a network or server with excessive traffic to disrupt its normal operation. What is it called?
 Denial of service
@@ -409,7 +412,7 @@ https://www.sans.edu/profiles/katie-nickels
 Answer: Katie Nickels
 
 When did Microsoft publish the Expert Profile on Simeon Kakpovi?
-[Again, what I found isn't working. Will return.]
+I had to get creative with the OSI in this one, but found: 05/19/2023
 
 The "KC" in KC7 is a reference to this common cybersecurity framework that describes the steps an adversary must go through to be successful.
 Kill Chain
