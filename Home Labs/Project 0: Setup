@@ -1,5 +1,5 @@
-###OBJECTIVE
-#####My goal is to learn more about how to practically apply the tools and knowledge I've learned in educational environments. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Wazuh.
+### OBJECTIVE
+##### My goal is to learn more about how to practically apply the tools and knowledge I've learned in educational environments. I want to be able to see a full task through to the end, regardless of how many steps or tools it takes to get to the end result. I'll start with setting up the home lab itself (virtual machines and network), and then dig into things like log analysis with Wazuh.
 
 TOOLS USED
 - VMWare
