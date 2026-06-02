@@ -1,0 +1,202 @@
+SUMMARY
+Sunlands Aeronautics and Space Administration (SASA) is the esteemed government agency of the United Sunlands responsible for the civil space program, aeronautics research, and space research.
+Hard-level scenario blending cloud investigation with APT hunting. Cloud-native hunt techniques are a growing requirement in senior hunter JDs. Completing this demonstrates the ability to hunt across hybrid cloud environments — the hardest and most valued hunt skill.
+
+LEARNING OBJECTIVES
+- Identify foreign infrastructure through domain analysis. You will spot foreign TLDs and email providers as clues to attacker origins.
+- Trace watering hole attacks. You will uncover a fake International Space Summit website used to lure employees into downloading malware.
+- Follow privilege escalation from user to domain admin. You will trace how attackers escalate from an initial compromised account to full domain control in under two hours.
+- Identify persistence and credential dumping. You will find when attackers established mechanisms to maintain access and when they harvested passwords.
+- Pivot across attacker infrastructure. You will chain domain-to-IP and IP-to-domain relationships to map the full scope of attacker infrastructure.
+- Track data staging and exfiltration. You will find the staged file containing national secrets and trace where it was sent.
+
+SOURCE
+https://kc7cyber.com/dashboard/paths/security-analyst-iii
+
+STEPS TAKEN
+Section 1: Supermassive Black Hole
+You notice some security alerts for a file that appears to contain details on the blueprints of the Sunlands' energy grid. Paste the filename.
+SecurityAlerts
+| where description contains "energy"
+Answer: EnergyGrid-BluePrints.docx
+Note: SHA256 - 6a04f6eb2d3a01ec25cdb567033066af41f653ad983f3697d2cab95d9d223bda
+
+Which host did the alert from Q1 detect the suspicious file on?
+Answer: NKIG-DESKTOP
+
+Which employee does the host from Q2 belong to?
+Employees
+| where hostname == "NKIG-DESKTOP"
+Answer: Monica Aguila
+Notes: IP - 10.10.3.181, email - monica_aguila@space.gov.su, username - moaguila, role - Intern
+
+The attacker sent the suspicious file to that employee from what email address?
+Email
+| where recipient == "monica_aguila@space.gov.su"
+| where link contains "EnergyGrid-BluePrints.docx"
+Answer: urgent@verizon.com
+Note: Reply-To (energygrid@protonmail.com) does not match
+
+Look at the email message from Q4. The webmail service of the other attacker email address is headquartered in what country?
+Answer: Use Reply-To - Switzerland
+
+What domain did the victim download the file from?
+Answer: renewablesolutionsgriddefender.com/
+
+What is the name of the process through which the suspicious file was downloaded?
+FileCreationEvents
+| where hostname contains "NKIG-DESKTOP"
+| where filename contains "EnergyGrid"
+Answer: Edge.exe
+
+How many unique IP addresses does the domain from Q6 resolve to?
+PassiveDns
+| where domain == "renewablesolutionsgriddefender.com"
+| distinct ip
+Answer: 10
+
+How many domains do the IP addresses from Q8 resolve to?
+let sus_ips=
+PassiveDns
+| where domain == "renewablesolutionsgriddefender.com"
+| distinct ip;
+PassiveDns
+| where ip in (sus_ips)
+| distinct domain
+Answer: 11
+
+How many employees visited the domains from Q9?
+OutboundNetworkEvents
+| where url has_any ("renewablesolutionspowergrid.com", "energycorp-powergrid.com", "renewablesolutions-powergrid.com", "energycorpgriddefender.com", "renewablesolutions-griddefender.com", "griddefenderpowergrid.com", "renewablesolutionsgriddefender.com", "renewablesolutionsenergycorp.com", "renewablesolutions-energycorp.com", "griddefender-powergrid.com", "energycorp-griddefender.com")
+| distinct src_ip
+Answer: 39
+
+How many unique files were downloaded from the domains from Q9?
+OutboundNetworkEvents
+| where url has_any ("renewablesolutionspowergrid.com", "energycorp-powergrid.com", "renewablesolutions-powergrid.com", "energycorpgriddefender.com", "renewablesolutions-griddefender.com", "griddefenderpowergrid.com", "renewablesolutionsgriddefender.com", "renewablesolutionsenergycorp.com", "renewablesolutions-energycorp.com", "griddefender-powergrid.com", "energycorp-griddefender.com")
+| distinct url
+Answer: 5
+
+Looking at the files found in Q11, which one was downloaded the most?
+FileCreationEvents
+| where filename has_any ("RenewableEnergy-Secrets.lnk","EnergyCybersecurity_Report.xlsx","GridDefender_Technical_Doc.xlsx","EnergyGrid-Blueprints.docx","PowerGrid_Security_Report.pdf")
+| summarize dcount(hostname) by filename
+Answer: GridDefender_Technical_Doc.xlsx
+
+Let's take a look at the employees who downloaded the files from question 11. Which role is seen the most?
+let comp_hosts=
+FileCreationEvents
+| where filename has_any ("RenewableEnergy-Secrets.lnk","EnergyCybersecurity_Report.xlsx","GridDefender_Technical_Doc.xlsx","EnergyGrid-Blueprints.docx","PowerGrid_Security_Report.pdf")
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| summarize dcount(hostname) by role
+Answer: Intern
+
+What is the name of the employee who first downloaded one of the files from question 11?
+FileCreationEvents
+| where filename has_any ("RenewableEnergy-Secrets.lnk","EnergyCybersecurity_Report.xlsx","GridDefender_Technical_Doc.xlsx","EnergyGrid-Blueprints.docx","PowerGrid_Security_Report.pdf")
+It was first seen on B6MB-MACHINE
+Employees
+| where hostname == "B6MB-MACHINE"
+Answer: Wilbert Wiemer
+
+TDMtRDlOeDFYczg9aT91cGduai96YnAucm9oZ2hibC5qamovLzpmY2dndQ==
+Answer: https://www.youtube.com/watch?v=8fK1kA9Q-3Y
+
+
+Section 2: Yeeted Into Space
+What is the domain the attackers used to compromise SASA employees interested in the International Space Summit?
+Email
+| where link contains "Summit"
+| distinct link
+Answer: Intlspacesummit2123.info
+
+Which top-level domain (TLD) used by the attacker suggests evidence of foreign interference?
+OutboundNetworkEvents
+| where url contains "Intlspacesummit2123.info" and url contains "redirect"
+Answer: lu
+This one took some nudging from the Discord.
+
+What was the most common file (name) that victims downloaded from the attacker domains in Q2?
+FileCreationEvents
+| where filename has_any ("SpaceportProposal.docx", "SpaceInvestmentProjections.xlsx", "AsteroidMiningBrief.ppt")
+| summarize dcount(path) by filename
+Answer: AsteroidMiningBrief.ppt
+
+Right after the victims downloaded the files from Q3, the attackers ran a command to connect to their infrastructure. What is the password?
+Get the timestamp and hostname for the first one:
+FileCreationEvents
+| where filename == "AsteroidMiningBrief.ppt"
+7/2/2123, 3:00:04 PM, ZKV8-MACHINE
+ProcessEvents
+| where hostname == "ZKV8-MACHINE"
+| where timestamp > datetime(7/2/2123, 3:00:04 PM)
+Answer: Aliens!:D
+
+The attackers ran commands to discover more about their victims’ network. What is the hostname of the first victim with these commands? This includes compromised hosts that may have been impacted outside of the file in Q3.
+let comp_hosts=
+FileCreationEvents
+| where filename has_any ("SpaceportProposal.docx", "SpaceInvestmentProjections.xlsx", "AsteroidMiningBrief.ppt")
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where timestamp > datetime(7/1/2123, 2:55:20 PM) //First time the file was seen
+Answer: OWQK-MACHINE
+
+When did the attackers first run a command to maintain their foothold in victim devices despite restarts, changed credentials, and other interruptions?
+Sometimes scheduled tasks are how this is performed:
+ProcessEvents
+| where process_commandline contains "schtask"
+Answer: 7/19/2123, 12:00:03 PM
+
+We know that some of the Sunlands bigwigs got compromised by our threat actor, the question is how…find the role that was compromised most frequently with the command from question 6. How many hosts linked to this role were compromised?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "schtask"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| summarize dcount(hostname) by role
+Answer: 175
+
+One of these compromised hosts was used as a vector to target an OP account with full control of the domain. Which account was successfully compromised?
+Employees
+| where role contains "IT Specialist"
+| distinct ip_addr;
+AuthenticationEvents
+| where src_ip in (it_ips)
+| where username contains "domain"
+| where result contains "success"
+Answer: jeburbage_domain_admin
+This one also took some nudging.
+
+What account did the actor compromise in order to gain access to the account from Q8?
+let comp_host=
+AuthenticationEvents
+| where username == "jeburbage_domain_admin"
+| where result contains "success"
+| where hostname contains "domain"
+| distinct src_ip;
+Employees
+| where ip_addr in (comp_host)
+| distinct username
+Answer: dacusack
+
+What time did the attackers dump credentials?
+ProcessEvents
+| where hostname contains "domain"
+Answer: 2123-07-19T13:43:24Z
+
+Now that the attacker has full access to the network, what file did they use to stage exfiltration data about the United Sunlands’ sensitive rocket tech and spaceport deal?
+This gets us the path (in encrypted format to decode):
+ProcessEvents
+| where process_commandline contains "enc "
+| distinct process_commandline
+Then:
+FileCreationEvents
+| where path contains "s3cr3ts"
+Answer: snlnds_s3cr3ts.rar
+
+The attackers transferred the exfiltrated data to what URL?
+Answer: http://spaceresearch.as/exfil/
