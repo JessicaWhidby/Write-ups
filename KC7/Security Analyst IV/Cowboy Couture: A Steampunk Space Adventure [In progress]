@@ -1,0 +1,72 @@
+SUMMARY
+Celestial Cowboy Couture has spent months planning and pouring money into launching their most anticipated collection. They even hired a superstar fashion CEO to take them to the next level and stand alongside the big French and Italian brands. Everything was set for the big launch, but just as they were ready to unveil the collection, an employee noticed something disturbing: some of their designs had already been knocked off and were available on OutlawBuy.com! 
+
+SOURCE
+https://kc7cyber.com/challenges/298
+
+Section 1: What's a Query?
+What is the name of the Director of Happiness?
+Employees
+| where role == "Director of Happiness"
+Answer: Jason Blanchard
+Notes: IP - 10.10.0.41, email - jason_blanchard@celestialcowboycouture.com, username - jablanchard, hostname - WHTI-MACHINE, MFA enabled - True
+
+What is Mary Ellen Kennel's role?
+Employees
+| where name == "Mary Ellen Kennel"
+Answer: Designer
+Notes: IP - 10.10.0.31, email - mary_ellen_kennel@celestialcowboycouture.com, username - maellen, hostname - EYMG-LAPTOP, MFA enabled - False
+
+What is our model's exact role?
+Employees
+| where role contains "model"
+Answer: Underwear Model
+Notes: name - John Strand, IP - 10.10.0.3, email - john_strand@celestialcowboycouture.com, username - jostrand, hostname - PFW2-DESKTOP, MFA enabled - True
+
+What is John Strand's IP Address?
+Answer: 10.10.0.3
+
+What is John Strand's hostname?
+Answer: PFW2-DESKTOP
+
+What is John Strand's email address?
+Answer: john_strand@celestialcowboycouture.com
+
+How many emails did John Strand receive?
+Email
+|where recipient == "john_strand@celestialcowboycouture.com"
+| count
+Answer: 25
+
+How many distinct commands were run on John Strand's machine?
+ProcessEvents
+| where hostname == "PFW2-DESKTOP"
+| distinct process_commandline
+Answer: 148
+
+
+Section 2: All About the Dataz
+Which table would tell us if John Strand received a suspicious email?
+Answer: Email
+
+Which table would tell us if he went to his bank website to see how much money he had?
+Answer: OutboundNetworkEvemts
+
+Which table would tell us if John Strand saved a malicious file on his computer?
+Answer: FileCreationEvents
+
+Which table would tell us if John Strand opened that malicious file that was saved on his computer?
+Answer: ProcessEvents
+
+Which table would you look in to see if that malicious file was detected on John Strand's machine?
+Answer: SecurityAlerts
+
+
+Section 3: Cyber Cattle Thief
+What is the name of the Lead Fashion Designer?
+Employees
+| where role == "Lead Fashion Designer"
+Answer:
+Notes: 
+
+
