@@ -1,0 +1,363 @@
+SOURCE
+https://kc7cyber.com/challenges/54
+
+STEPS TAKEN
+Section 1: KQL 101
+How many employees are in the company?
+Employees
+| count
+Answer: 1500
+
+Which employee has the IP address: 10.10.2.1?
+Employees
+| where ip_addr == "10.10.2.1"
+Answer: Preston Lane
+Notes: email - preston_lane@castleandsand.com, username - prlane, role - IT Helpdesk, hostname - 6S7W-MACHINE
+
+How many emails did Jacqueline Henderson receive?
+Employees
+| where name == "Jacqueline Henderson"
+Notes: IP - 10.10.0.66, email - jacqueline_henderson@castleandsand.com, username - jahenderson, role - Sales Representative, hostname - 4UNT-DESKTOP
+Email
+| where recipient == "jacqueline_henderson@castleandsand.com"
+Answer: 26
+
+How many distinct senders were seen in the email logs from sunandsandtrading.com?
+Email
+| where sender contains "sunandsandtrading.com"
+| distinct sender
+Anser: 2146
+
+How many unique websites did “Cristin Genao” visit?
+let cristin_ip=
+Employees
+| where name == "Cristin Genao"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (cristin_ip)
+| distinct url
+Answer: 45
+
+How many distinct domains in the PassiveDns records contain the word “shark”?
+PassiveDns
+| where domain contains "shark"
+| distinct domain
+Answer: 13
+
+What IPs did the domain “sharkfin.com” resolve to (enter any one of them)?
+PassiveDns
+| where domain == "sharkfin.com"
+| distinct ip
+Answers: 180.5.6.199, 157.242.169.232, 188.203.116.15, 200.106.38.88
+
+How many unique URLs were browsed by employees named “Karen”?
+let karen_ips=
+Employees
+| where name contains "Karen"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (karen_ips)
+| distinct url
+Answer: 151
+
+
+Section 2: Shark Attack!
+What email address did the threat actor provide to Castle&Sand to communicate with them?
+Answer from image: sharknadorules_gang@onionmail.org
+
+What is the unique decryption ID?
+Answer: SUNNYDAY123329JA0
+
+Should this (ransomware) be something you post publicly about? Yes or no?
+Answer: no
+
+The ransom note filename was called PAY_UP_OR_SWIM_WITH_THE_FISHES.txt. How many notes appeared in Castle&Sand's environment?
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+Answer: 774
+
+How many distinct hostnames had the ransom note?
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+| distinct hostname
+Answer: 774
+
+How many distinct employee roles were affected by the ransomware attack?
+let comp_hosts=
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| distinct role
+Answer: 18
+
+How many unique hostnames belong to IT employees?
+let comp_hosts=
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| where role contains "IT"
+| distinct hostname
+Answer: 48
+
+How many unique hostnames belong to IT employees?
+let comp_hosts=
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| where role contains "IT" and not( role contains "Security") //"Security Guard" comes up without that second clause
+| distinct hostname
+Answer: 25
+
+One of the IT employees has an IP address that ends in .46. What is that employee's name?
+Employees
+| where ip_addr contains ".46"
+| where role contains "IT" and not(role contains "security")
+Answer: Simeon Kakpovi
+
+Let's take the unique hostnames that had the ransom note and search them across our SecurityAlerts. How many security alerts involved the different hosts?
+let comp_hosts=
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+| distinct hostname;
+SecurityAlerts
+| where description has_any (comp_hosts)
+Answer: 652
+
+How many Security Alerts reference the hostnames of helpdesk employees that received ransom notes?
+let comp_hosts=
+FileCreationEvents
+| where filename == "PAY_UP_OR_SWIM_WITH_THE_FISHES.txt"
+| distinct hostname;
+let help_hosts = 
+Employees
+| where hostname in (comp_hosts)
+| where role contains "IT" and not(role contains "security")
+| distinct hostname;
+SecurityAlerts
+| where description has_any (help_hosts)
+Answer: 27
+
+Let's look for any anomalies in the alerts that look different from the other alerts and might be shark-themed like the ransomware. You should find one. Who owns the machine that was flagged on that alert? (provide their name)
+From the previous results, there is this one that sticks out: A suspicious file was quarantined on host 6S7W-MACHINE: Chomping-Schedule_Changes.xlsx
+Employees
+| where hostname == "6S7W-MACHINE"
+Answer: Preston Lane
+
+When did the file appear on that user's machine? (copy and paste the full timestamp)
+FileCreationEvents
+| where hostname == "6S7W-MACHINE"
+| where filename == "Chomping-Schedule_Changes.xlsx"
+Answer: 5/26/2023, 9:26:15 AM
+
+What's the SHA256 hash of that file?
+Answer: 71daa56c10f7833848a09cf8160ab5d79da2dd2477b6b3791675e6a8d1635016
+
+What application created that file?
+Answer: firefox.exe
+
+How many unique hosts had files with that exact name on their systems?
+FileCreationEvents
+| where filename == "Chomping-Schedule_Changes.xlsx"
+| distinct hostname
+Answer: 11
+
+How many unique domains did employees download this file from?
+OutboundNetworkEvents
+| where url contains "Chomping-Schedule_Changes.xlsx"
+| distinct url
+Answer: 2
+
+Based on the employee we've been tracking from Question 11, which domain did they download the file from?
+Remember, his IP is 10.10.2.1
+OutboundNetworkEvents
+| where url contains "Chomping-Schedule_Changes.xlsx"
+| where src_ip == "10.10.2.1"
+Answer: jawfin.com
+
+How many unique IP addresses did the domain resolve to?
+PassiveDns
+| where domain contains "jawfin.com"
+| distinct ip
+Answer: 6
+Notes: 134.136.25.2, 17.72.123.89, 193.248.75.126, 213.30.8.133, 19.216.253.112, 165.185.77.18
+
+Which IP address is closest in time to when the file was created of the employee's machine?
+The timestamp when it was created was 5/26/2023, 9:26:15 AM
+Answer: 193.248.75.126
+Notes: 5/25/2023, 6:10:10 PM
+
+There was another domain found from Q16. How many unique IPs did that domain resolve to?
+That domain is sharkfin.com
+PassiveDns
+| where domain contains "sharkfin.com"
+| distinct ip
+Answer: 4
+Notes: 180.5.6.199, 157.242.169.232, 188.203.116.15, 200.106.38.88
+
+Let's take all of the IP addresses from the two domains and search them against network events on Castle&Sand's website. How many records returned from your query?
+InboundNetworkEvents
+| where src_ip has_any ("180.5.6.199", "157.242.169.232", "188.203.116.15", "200.106.38.88", "134.136.25.2", "17.72.123.89", "193.248.75.126", "213.30.8.133", "19.216.253.112", "165.185.77.18")
+Answer: 39
+
+When was the first time we saw any of these actor IP addresses from Q21 against Castle&Sand's network?
+Answer: 5/20/2023, 3:11:57 AM
+
+Let's search the actor IPs against AuthenticationEvents to see if they logged into any user machines or email accounts. How many records did you get back?
+AuthenticationEvents
+| where src_ip has_any ("180.5.6.199", "157.242.169.232", "188.203.116.15", "200.106.38.88", "134.136.25.2", "17.72.123.89", "193.248.75.126", "213.30.8.133", "19.216.253.112", "165.185.77.18")
+Answer: 0
+
+Let's look for the malicious domains in Emails. How many records did you get back?
+Email
+| where link contains "sharkfin.com" or link contains "jawfin.com"
+Answer: 14
+
+When was the earliest email sent?
+Answer: 5/25/2023, 4:33:09 PM
+
+Who was the sender?
+Answer: legal.sand@verizon.com
+
+How many emails total did that sender send to Castle&Sand employees?
+Email
+| where sender == "legal.sand@verizon.com"
+Answer: 23
+
+Take all of the distinct sender or reply_to emails from the last question. How many emails total are associated with these email addresses?
+Email
+| where sender == "legal.sand@verizon.com"
+| distinct reply_to
+Notes: castle@hotmail.com, legal.sand@verizon.com, urgent_urgent@yandex.com
+Email
+| where sender has_any ("castle@hotmail.com", "legal.sand@verizon.com", "urgent_urgent@yandex.com") or reply_to has_any ("castle@hotmail.com", "legal.sand@verizon.com", "urgent_urgent@yandex.com")
+Answer: 40
+
+How many unique domains did the email addresses use in their emails?
+Email
+| where sender has_any ("castle@hotmail.com", "legal.sand@verizon.com", "urgent_urgent@yandex.com") or reply_to has_any ("castle@hotmail.com", "legal.sand@verizon.com", "urgent_urgent@yandex.com")
+| distinct link
+Answer: 6 (one is repeated)
+
+How many distinct IP addresses total were used by all of the domains identified in Q29?
+PassiveDns
+| where domain has_any ("byte-apex.com", "byte-fin.com", "byte-jaw.com", "jawshark.com", "jawfin.com", "sharkfin.com")
+| distinct ip
+Answer: 15
+Notes: 134.136.25.2, 17.72.123.89, 200.106.38.88, 165.16.99.57, 180.5.6.199, 68.52.28.213, 157.242.169.232, 188.203.116.15, 149.198.89.201, 193.248.75.126, 132.11.201.67, 213.30.8.133, 19.216.253.112, 202.7.209.235, 165.185.77.18
+
+How many user accounts did these IPs log into?
+AuthenticationEvents
+| where src_ip has_any ("134.136.25.2", "17.72.123.89", "200.106.38.88", "165.16.99.57", "180.5.6.199", "68.52.28.213", "157.242.169.232", "188.203.116.15", "149.198.89.201", "193.248.75.126", "132.11.201.67", "213.30.8.133", "19.216.253.112", "202.7.209.235", "165.185.77.18")
+| distinct username
+Answer: 0
+
+Looking at these emails (from question 28), how many unique filenames were served by these domains?
+Email
+| where sender has_any ("castle@hotmail.com", "legal.sand@verizon.com", "urgent_urgent@yandex.com") or reply_to has_any ("castle@hotmail.com", "legal.sand@verizon.com", "urgent_urgent@yandex.com")
+| distinct link
+Answer: 5 (2 filenames are repeated)
+
+How many files with these names were created on employee host machines?
+FileCreationEvents
+| where filename has_any ("Jawdropping-Employee.lnk", "HR_Sharktastic_Notes.pdf", "Fintastic-Work-Updates.docx", "Sharktastic_Employee_Changes.xlsx", "Chomping-Schedule_Changes.xlsx")
+Answer: 34
+
+When was the first file observed?
+Answer: 5/25/2023, 4:43:20 PM
+
+Let's take the hosts from here and search for them in ProcessEvents. How many records total are associated with the identified host machines from Q33?
+let comp_hosts=
+FileCreationEvents
+| where filename has_any ("Jawdropping-Employee.lnk", "HR_Sharktastic_Notes.pdf", "Fintastic-Work-Updates.docx", "Sharktastic_Employee_Changes.xlsx", "Chomping-Schedule_Changes.xlsx")
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+Answer: 16391
+
+Using your query from Q35, set a new query where the timestamp is greater than the first time you saw the file in Q34. How many records total do you have now?
+let comp_hosts=
+FileCreationEvents
+| where filename has_any ("Jawdropping-Employee.lnk", "HR_Sharktastic_Notes.pdf", "Fintastic-Work-Updates.docx", "Sharktastic_Employee_Changes.xlsx", "Chomping-Schedule_Changes.xlsx")
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where timestamp > datetime(5/25/2023, 4:43:20 PM)
+Answer: 5818
+
+Let's look at the first few records. There's some suspicious powershell activity that occurs near the beginning. What IP address is referenced in that command?
+Answer: 220.35.180.137
+
+Which host machine did the powershell activity execute on?
+Answer: CL8Q-LAPTOP
+
+There's a weird repeating command right before this activity. What's the parent process of the first time this repeated activity occurs?
+Answer: scvhost.exe
+
+What legitimate Windows process was this file trying to masquerade as?
+Answer: svchost.exe
+
+After the powershell activity there's evidence that a popular password cracking tool may have executed on a host machine. Take that file and search for how many times that tool may have ran on the Castle&Sand environment. How many hosts had their passwords dumped?
+let comp_hosts=
+FileCreationEvents
+| where filename has_any ("Jawdropping-Employee.lnk", "HR_Sharktastic_Notes.pdf", "Fintastic-Work-Updates.docx", "Sharktastic_Employee_Changes.xlsx", "Chomping-Schedule_Changes.xlsx")
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where timestamp > datetime(5/25/2023, 4:43:20 PM)
+| where process_commandline contains "mimikatz"
+Answer: 31
+
+Let's go back to the powershell activity from question 37. How many hosts did that powershell command execute on?
+ProcessEvents
+| where process_commandline has ("powershell.exe -nop -w hidden -c \"IEX ((new-object net.webclient).downloadstring")
+| distinct hostname
+Answer: 31
+
+How many unique IP addresses were used in these commands?
+ProcessEvents
+| where process_commandline has ("powershell.exe -nop -w hidden -c \"IEX ((new-object net.webclient).downloadstring")
+| distinct process_commandline
+Answer: 14
+
+Which of these IP addresses was seen the most?
+ProcessEvents
+| where process_commandline has ("powershell.exe -nop -w hidden -c \"IEX ((new-object net.webclient).downloadstring")
+| summarize count() by process_commandline
+Answer: 157.242.169.232
+
+Take the parent processes from Q42. How many records total involved those processes?
+Parent processes: ccl110u.dll, scvhost.exe, cy.exe, libexpa.dll, config.ini, winutils.dll
+ProcessEvents
+| where parent_process_name has_any ("ccl110u.dll", "scvhost.exe", "cy.exe", "libexpa.dll", "config.ini", "winutils.dll")
+Answer: 62
+
+Let's look to see if any of these files are referenced in the command line. How many records did you find?
+ProcessEvents
+| where process_commandline has_any ("ccl110u.dll", "scvhost.exe", "cy.exe", "libexpa.dll", "config.ini", "winutils.dll")
+Answer: 1548
+
+When was the earliest time found in Q46?
+Answer: 6/9/2023, 7:43:58 PM
+
+You remember that the encrypted files all had the extension '.sharkfin'. Search for that in created files. When was the earliest time you saw these files?
+FileCreationEvents
+| where filename contains ".sharkfin"
+Answer: 6/9/2023, 7:43:48 PM
+
+
+Section 3: Hunting the Shark
+
+
+
+
+
+
+
+
+
