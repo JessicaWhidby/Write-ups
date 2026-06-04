@@ -352,12 +352,395 @@ Answer: 6/9/2023, 7:43:48 PM
 
 
 Section 3: Hunting the Shark
+How many hours does Castle&Sand have before the gang releases the information?
+Answer: 72
+
+What do the ransomware gang call themselves
+Answer: Sharkboyz
+
+What Mitre Technique is aligned with what this group did on Castle&Sand systems?
+Answer: T1486
+
+Let's search for the email domain used in the ransom note. What is the ZIP code of their headquarters?
+Answer: 10016
+
+What country is this email service located in?
+Answer: USA
+
+Let's look at the IP addresses from Section 2, Q18 using MaxMind GeoIP2. How many continents total are these IP addresses from?
+Reminder: 134.136.25.2, 17.72.123.89, 193.248.75.126, 213.30.8.133, 19.216.253.112, 165.185.77.18
+Answer: 3
+
+Use search.censys.io to look up the IP address found in Section 2, Q19. What is the Autonomous System (AS) number for the IP address?
+Reminder: 193.248.75.126
+Answer: AS3215
+
+Look at the IPs from Section 2, Q20. Which one is assigned to a University?
+Reminder: 180.5.6.199, 157.242.169.232, 188.203.116.15, 200.106.38.88
+Answer: 157.242.169.232
+
+Look at the emails from Section 2, Q28. Which email address is associated with a company outside of the United States?
+Reminder: castle@hotmail.com, legal.sand@verizon.com, urgent_urgent@yandex.com
+Answer: urgent_urgent@yandex.com
+
+For the tool found in Section 2, Q41, what is the MITRE ID for that specific software?
+Reminder: mimikatz
+Answer: S0002
+
+What is the MITRE ID for that type of technique that this tool is typically used for?
+Answer: T1003
+
+Take the filenames from Section 2, Q45. How many unique SHA256 hashes are found in Castle&Sand's environment with these filenames?
+Reminder:
+ProcessEvents
+| where parent_process_name has_any ("ccl110u.dll", "scvhost.exe", "cy.exe", "libexpa.dll", "config.ini", "winutils.dll")
+Now:
+ProcessEvents
+| where parent_process_name has_any ("ccl110u.dll", "scvhost.exe", "cy.exe", "libexpa.dll", "config.ini", "winutils.dll")
+| distinct parent_process_hash
+Answer: 9
+Notes: af99dea461d36b775235a107c7ea94a2b457851ef62d0ed6f0c50fb5131c8c8b, d18aa84b7bf0efde9c6b5db2a38ab1ec9484c59c5284c0bd080f5197bf9388b0, 4874d336c5c7c2f558cfd5954655cacfc85bcfcb512a45fb0ff461ce9c38b86d, 7ef2cc079afe7927b78be493f0b8a735a3258bc82801a11bc7b420a72708c250, 21ff279ba30d227e32e63cb388bf8c2d21c4fd7e935b3087088579b29e56d81d, b99d114b267ffd068c3289199b6df95a9f9e64872d6c2b666d63974bbce75bf2, aa48acaef62a7bfb3192f8a7d6e5229764618ac1ad1bd1b5f6d19a78864eb31f, f77077777b0cd9edd693b87cbaaaefe73436395192a2b77a841b2d5bd9b088e8, 82a7241d747864a8cf621f226f1446a434d2f98435a93497eafb48b35c12c180
+
+How many were flagged as malicious on VirusTotal?
+af99dea461d36b775235a107c7ea94a2b457851ef62d0ed6f0c50fb5131c8c8b - yes
+d18aa84b7bf0efde9c6b5db2a38ab1ec9484c59c5284c0bd080f5197bf9388b0 - yes
+4874d336c5c7c2f558cfd5954655cacfc85bcfcb512a45fb0ff461ce9c38b86d - no
+7ef2cc079afe7927b78be493f0b8a735a3258bc82801a11bc7b420a72708c250 - yes
+21ff279ba30d227e32e63cb388bf8c2d21c4fd7e935b3087088579b29e56d81d - yes
+b99d114b267ffd068c3289199b6df95a9f9e64872d6c2b666d63974bbce75bf2 - yes
+aa48acaef62a7bfb3192f8a7d6e5229764618ac1ad1bd1b5f6d19a78864eb31f - yes
+f77077777b0cd9edd693b87cbaaaefe73436395192a2b77a841b2d5bd9b088e8 - yes
+82a7241d747864a8cf621f226f1446a434d2f98435a93497eafb48b35c12c180 - yes
+Answer: 8
+
+Which file hash was reported by the security community as the ransomware's encrypted payload?
+Answer: 82a7241d747864a8cf621f226f1446a434d2f98435a93497eafb48b35c12c180
+
+For Section 2, Q46, what ransomware family uses a command similar to this process execution?
+Answer: Rorschach
 
 
+Section 4: Sand in my Eyes (New Threat Actor)
+The threat actors used an email with Castle&Sand's name in it: castleandsand_official@outlook.com. How many emails were sent from this email to Castle&Sand employees?
+Email
+| where sender contains "castleandsand_official@outlook.com"
+Answer: 19
+
+There appears to be another email account. How many emails total are referenced by these two email accounts?
+Other address: castleandsandlegaldepartment@gmail.com
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+Answer: 33
+
+How many unique domains are found in the links of these emails?
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct link
+Answer: 4
+
+Based on these domains, what type of attack did this threat actor conduct?
+Answer: watering hole
+
+How many distinct job roles were targeted by this type of attack?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct role
+Answer: 13
+
+Let's take the targeted employees and look for all external IP addresses that authenticated to those users. How many external IP addresses were used to successfully log into those user accounts?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip
+Answer: 43
+
+These IP addresses may have accessed email inboxes and downloaded data. How many unique filenames were downloaded by these IP addresses?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| distinct tostring(ur) 
+Answer: 14
+
+How many distinct IPs were involved in the stealing of downloaded data from the previous questions?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| summarize count(ur) by src_ip
+Answer: 9
+
+Based on the IPs from Q6, how many unique domains did they resolve to?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+let new_ips=
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| summarize count(ur) by src_ip;
+PassiveDns
+| where ip in (new_ips)
+| distinct domain
+Answer: 5
+
+Let's go back to the user accounts that may have been affected by the phishing campaign. How many hosts have they logged into?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+AuthenticationEvents
+| where username in (users)
+| where result contains "success"
+| distinct hostname
+Answer: 43
+
+Investigate the domains from Q9. How many files are present on Castle&Sand systems that originated from these domains?
+Domains: keywordssurfparadise.com, azurebeachsupply.com, beachlifestylestore.com, sunandcastletrading.com, sandsurfinggear.com
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+let new_ips=
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| summarize count(ur) by src_ip;
+let domains=
+PassiveDns
+| where ip in (new_ips)
+| distinct domain;
+let files=
+OutboundNetworkEvents
+| where url has_any (domains)
+| extend filen = tostring(split(url, '/')[-1])
+| distinct filen;
+FileCreationEvents
+| where filename in (files)
+Answer: 15
+Notes: Work-Updates.docx, HR_Notes.pdf, employee.lnk, Employee_Changes.xlsx, store_updates.xlsx
+
+How many unique malware filenames are created from these files?
+| distinct filename
+Answer: 5
+
+How many of these files total are present on Castle&Sand systems?
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+let new_ips=
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| summarize count(ur) by src_ip;
+let domains=
+PassiveDns
+| where ip in (new_ips)
+| distinct domain;
+let files=
+OutboundNetworkEvents
+| where url has_any (domains)
+| extend filen = tostring(split(url, '/')[-1])
+| distinct filen;
+FileCreationEvents
+| where filename in (files)
+| distinct hostname
+Answer: 14
+
+How many distinct C2 servers are associated with the malware?
+let comp_hosts=
+FileCreationEvents
+| where filename has_any ("Work-Updates.docx", "HR_Notes.pdf", "employee.lnk", "Employee_Changes.xlsx", "store_updates.xlsx")
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where process_commandline contains "plink"
+| distinct process_commandline
+Answer: 7
+
+When is the first time you see this final action by the threat actor? Copy & paste the full timestamp.
+Assuming the last thing they do will be exfiltration, I searched for that:
+ProcessEvents
+| where process_commandline contains "exfil"
+Answer: 2023-05-26T10:33:04Z
+
+What MITRE Technique is this aligned with?
+Answer: T1048
+
+How many hosts are affected by this action?
+ProcessEvents
+| where process_commandline contains "exfil"
+| distinct hostname
+Answer: 14
+
+How many distinct job roles were affected by this action?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "exfil"
+| distinct hostname;
+Employees
+| where hostname in (comp_hosts)
+| distinct role
+Answer: 5
 
 
+Section 5: A Clean Sweep
+Look up the IP addresses from S4 Q8. Which IP address is in the country that hosted the winter olympics a few years ago (South Korea) ?
+Reminder: let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| summarize count(ur) by src_ip
+Answer: 124.138.210.88
+Notes: 43.185.57.65, 215.239.162.10, 215.168.239.75, 156.155.83.236, 192.91.130.34, 190.198.227.17, 223.9.222.59, 124.138.210.88, 195.242.92.76
+
+Which one hosted the winter olympics recently? If there's more than one, post any of them.
+(This seems to have been written when the most recent winter Olympics was in Beijing.)
+Answer: 223.9.222.59
+
+Search the malicious files found in Q12 on VirusTotal.com. Which file appears to not be malicious? Copy and paste the SHA256 hash.
+Answer: e2a7a9a803c6a4d2d503bb78a73cd9951e901beb5fb450a2821eaf740fc48496
+
+Who signed the file?
+Answer: Microsoft Corporation
+
+Which threat actor group may have used these in the past?
+Answer: APT 41
+
+For what you found in Section 4, Q15, who developed this malware? Paste their username.
+Answer: Arno0x
 
 
+Section 6: Security Jeopardy Redux
+In what year was KC7 founded?
+Answer: 2023
 
+Ransomware payments are almost always demanded in this form of currency to make them harder to trace. What type of currency is this?
+Answer: bitcoin
 
+This US government agency maintains a catalog of Known Exploited Vulnerabilities (KEV) that organizations are strongly encouraged to patch. What agency is it?
+Answer: CISA
 
+This notorious ransomware group operated a "Ransomware-as-a-Service" platform and was taken down by an international law enforcement operation called "Operation Cronos" in February 2024. What was the group's name?
+Answer: LockBit
+
+How many bits are in a byte?
+Answer: 8
+
+How many megabytes are in a gigabyte?
+Answer: 1000
+
+Who on Twitter likes to IMPOSE COST to adversaries, and really likes Spiderman? You can. enter their name or handle.
+Answer: ImposeCost
+
+What cybersecurity conference is focused on Detection Engineering And Threat Hunting? Provide the domain name of their website.
+Answer: deathcon.io/
+
+What SssSssSecurity conference focused on cyber crime is typically hosted recently in Arlington VA?
+Answer: SleuthCon
+
+What recent ZERO DAY vulnerability in late May / June 2023 where it was reported that the LACE TEMPEST group took responsibility for it? Copy & paste the CVE.
+Answer: CVE-2023-34362
+
+Who is claiming responsibility for the DDOS attacks at a well know tech company? (June 2023)
+Answer: Anonymous Sudan
+
+eWV2dG5pbnkgcWFuIGxib3hlbnVm
+Answer: sharkboy and lavagirl
+
+01101000 01110100 01110100 01110000 01110011 00111010 00101111 00101111 01111001 01101111 01110101 01110100 01110101 00101110 01100010 01100101 00101111 01100100 01010001 01110111 00110100 01110111 00111001 01010111 01100111 01011000 01100011 01010001
+Answer: https://youtu.be/dQw4w9WgXcQ
