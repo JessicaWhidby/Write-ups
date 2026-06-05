@@ -589,8 +589,48 @@ Answer: 15
 Notes: Work-Updates.docx, HR_Notes.pdf, employee.lnk, Employee_Changes.xlsx, store_updates.xlsx
 
 How many unique malware filenames are created from these files?
-| distinct filename
+let sus_email_recpt=
+Email
+| where sender contains "castleandsand_official@outlook.com" or sender contains "castleandsandlegaldepartment@gmail.com"
+| distinct recipient;
+let users=
+Employees
+| where email_addr in (sus_email_recpt)
+| distinct username;
+let ips=
+AuthenticationEvents
+| where username in (users)
+| where not(src_ip contains "10.10.") and not(src_ip contains "192.168.")
+| where result contains "success"
+| distinct src_ip;
+let new_ips=
+InboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "mailbox"
+| extend ur = split(url,"=")[4]
+| summarize count(ur) by src_ip;
+let domains=
+PassiveDns
+| where ip in (new_ips)
+| distinct domain;
+let files=
+OutboundNetworkEvents
+| where url has_any (domains)
+| extend filen = tostring(split(url, '/')[-1])
+| distinct filen;
+let mal_hosts=
+FileCreationEvents
+| where filename in (files)
+| distinct hostname;
+FileCreationEvents
+| where hostname in (mal_hosts)
+| serialize
+| extend next_timestamp_filename = next(filename)
+| where filename in ("Work-Updates.docx", "HR_Notes.pdf", "employee.lnk", "Employee_Changes.xlsx", "store_updates.xlsx")
+| where next_timestamp_filename !in ("Work-Updates.docx", "HR_Notes.pdf", "employee.lnk", "Employee_Changes.xlsx", "store_updates.xlsx")
+| distinct next_timestamp_filename
 Answer: 5
+Notes: TSVIPSrv.dll, 1.exe, i.exe, wmi.dll, procdump64.exe
 
 How many of these files total are present on Castle&Sand systems?
 let sus_email_recpt=
