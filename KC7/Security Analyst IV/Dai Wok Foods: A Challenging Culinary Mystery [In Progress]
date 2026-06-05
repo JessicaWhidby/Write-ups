@@ -1,0 +1,247 @@
+LEARNING OBJECTIVES
+- Use multiple techniques to track the activity of APTs (Advanced Persistent Threats)
+- Use third-party data sets to discover insights about your attackers
+- Make recommendations on actions a company can take to protect itself
+- Use VirusTotal to analyze file hashes and identify threat actors
+- Trace reply-to email manipulation across multiple sender addresses
+- Correlate authentication logs with geographic anomalies
+- Recognize supply chain compromise through trusted partners
+- Trace attacker reconnaissance on a company website
+
+SOURCE
+https://kc7cyber.com/challenges/49
+
+STEPS TAKEN
+Section 1: KQL 101
+How many employees are in the company?
+Employees
+| count
+Answer: 1111
+
+Each employee at Dai Wok Foods is assigned an IP address. Which employee has the IP address: “192.168.2.191”?
+Employees
+| where ip_addr == "192.168.2.191"
+Answer: Wayne Rydberg
+Notes: email - wayne_rydberg@daiwokfoods.com, username - warydberg, role - Operations Specialist, hostname - FRRW-LAPTOP
+
+How many emails did Stuart Carter receive?
+let stewart_email=
+Employees
+| where name == "Stuart Carter"
+| distinct email_addr;
+Email
+| where recipient in (stewart_email)
+Answer: 38
+
+How many distinct senders were seen in the email logs from siusamteas.com?
+Email
+| where sender contains "siusamteas.com"
+| distinct sender
+Answer: 1546
+
+How many unique URLs did “Mary Davis” visit?
+let mary_ip=
+Employees
+| where name == "Mary Davis"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (mary_ip)
+| distinct url
+Answer: 66
+
+How many domains in the PassiveDns records contain the word “legal”?
+PassiveDns
+| where domain has "legal"
+Answer: 89
+
+What IPs did the domain “foodadministration-legal-services.com” resolve to (enter any one of them)?
+PassiveDns
+| where domain == "foodadministration-legal-services.com"
+| distinct ip
+Answer(s): 131.162.160.193, 188.216.230.252, 192.0.169.28, 201.216.44.27, 206.74.22.230
+
+How many unique URLs were browsed by employees named “Karen”?
+let karen_ips=
+Employees
+| where name contains "Karen"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (karen_ips)
+| distinct url
+Answer: 221
+
+Who is the Chief Executive Officer of Dai Wok Foods?
+Employees
+| where role == "Chief Executive Officer"
+Answer: Abby Zelda
+Notes: IP - 192.168.0.49, email - abby_zelda@daiwokfoods.com, username - abzelda, hostname - TSSG-DESKTOP
+
+
+Section 2: Tummy Trouble, Make It Double
+What's Delphia's username? Hint: use the Employees table.
+Employees
+| where name contains "Delphia"
+Answer: deevans
+Notes: name - Delphia Evans, IP - 192.168.0.31, email - delphia_evans@daiwokfoods.com, role - Restaurant Staff, hostname - ABVJ-MACHINE
+
+What's the company domain?
+Answer: daiwokfoods.com
+
+What's the hostname of Delphia's computer?
+Answer: ABVJ-MACHINE
+
+What is Delphia's Role at Dai Wok Foods?
+Answer: Restaurant Staff
+
+Let's take a look at the SecurityAlerts table for anything related to Delphia's username or host machine. When was the first alert related to Delphia?
+SecurityAlerts
+| where description contains "ABVJ-MACHINE" or description contains "deevans"
+Answer: 4/4/2023, 10:14:35 AM
+
+What's the full subject line that was listed on this alert? Provide the subject line without the quotes.
+Answer: [EXTERNAL] Formal action on food poisoning
+
+Let's go back and check for more of Delphia's information now. What IP address is assigned to her computer?
+Answer: 192.168.0.31
+
+What is Delphia's email address?
+Answer: delphia_evans@daiwokfoods.com
+
+Let's investigate her emails using the Email table. How many emails did she receive?
+Email
+| where recipient == "delphia_evans@daiwokfoods.com"
+Answer: 26
+
+How many external emails did Delphia receive?
+Email
+| where recipient == "delphia_evans@daiwokfoods.com"
+| where sender !contains "daiwokfoods.com"
+Answer: 15
+
+Let's look for the specific email with the subject that was found on Q6 that was sent to Delphia. When was the email sent to her?
+Answer: 4/2/2023, 8:40:54 PM
+
+Who sent the email?
+Answer: county.county@yahoo.com
+
+How many emails did this email address send to Dai Wok Employees?
+Email
+| where sender == "county.county@yahoo.com"
+Answer: 14
+
+Let's take the unique reply_to email addresses and find more sender addresses from those. How many emails are there?
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+Email
+| where reply_to in (reply_email)
+Answer: 43
+
+Let's take the unique replyto email addresses and find more sender addresses. How many unique sender addresses did you find?
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+Email
+| where reply_to in (reply_email)
+| distinct sender
+Answer: 5
+Notes: official@verizon.com, county.county@yahoo.com, complaint_county@gmail.com, service_official@yandex.com, official@gmail.com
+
+How many total emails were sent by this threat actor?
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+let senders =
+Email
+| where reply_to in (reply_email)
+| distinct sender;
+Email
+| where sender in (senders)
+| count
+Answer: 64
+
+There's a lot of domains listed in the link column from Q14. How many unique URLs are there?
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+Email
+| where reply_to in (reply_email)
+| extend domains = tostring(parse_url(link).Host)
+| distinct domains
+Answer: 12
+
+Let's check to see if anybody clicked on links from these domains. Search the OutboundNetworkEvents table to see if there are any hits on the domains found in Q17. What is the domain name (not the full link) of the URL found?
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+let dmns=
+Email
+| where reply_to in (reply_email)
+| extend domains = tostring(parse_url(link).Host)
+| distinct domains;
+OutboundNetworkEvents
+| where parse_url(url).Host in (dmns)
+Answer: complaints-cityofficialsfood.com
+Notes: 4/3/2023, 6:38:38 PM
+
+Who clicked on the link? Provide the full name.
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+let dmns=
+Email
+| where reply_to in (reply_email)
+| extend domains = tostring(parse_url(link).Host)
+| distinct domains;
+let clicker=
+OutboundNetworkEvents
+| where parse_url(url).Host in (dmns)
+| distinct src_ip;
+Employees
+| where ip_addr in (clicker)
+Answer: John Garcia
+Notes: IP - 192.168.3.86, email - john_garcia@daiwokfoods.com, username - jogarcia, role - Logistics Coordinator, hostname - LVJW-LAPTOP
+
+What is their role in the company?
+Answer: Logistics Coordinator
+
+What is their hostname?
+Answer: LVJW-LAPTOP
+
+Let's take their email address and take a look back at the emails that we've seen from the threat actor on Q14. Do we see their email address in here? Yes / No
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+Email
+| where reply_to in (reply_email)
+| where recipient == "john_garcia@daiwokfoods.com"
+Answer: no
+
+When did this employee receive the suspicious email?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
