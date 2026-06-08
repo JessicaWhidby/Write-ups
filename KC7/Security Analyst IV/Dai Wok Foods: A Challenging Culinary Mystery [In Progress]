@@ -225,6 +225,382 @@ Email
 Answer: no
 
 When did this employee receive the suspicious email?
+Email
+| where recipient == "john_garcia@daiwokfoods.com"
+Answer: 2023-04-03T18:04:56Z
+Notes: from - official@verizon.com, reply to - service_official@yandex.com, subject - [EXTERNAL] Legal notice of customer complaint, verdict - suspicious, link - https://complaints-cityofficialsfood.com/search/published/images/images/large_order.xlsx
+
+Based on the answer you found in Question 16, how many distinct roles were targeted by the threat actor?
+Reminder: 64 emails, shown by:
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+let senders =
+Email
+| where reply_to in (reply_email)
+| distinct sender;
+Email
+| where sender in (senders)
+| count
+Use:
+let reply_email=
+Email
+| where sender == "county.county@yahoo.com"
+| distinct reply_to;
+let senders =
+Email
+| where reply_to in (reply_email)
+| distinct sender;
+let recpts=
+Email
+| where sender in (senders)
+| distinct recipient;
+Employees
+| where email_addr in (recpts)
+| distinct role
+Answer: 15
+
+What's the reply_to email address of the suspicious email found in Q23?
+Answer: service_official@yandex.com
+
+Using Google or Bing, search for the name of the domain in the email address (do not go to the domain directly). What country is this domain from?
+Answer: Russia
+
+Let's take the domain name from the suspicious email and search for it in the PassiveDns table. How many records are related to that domain?
+PassiveDns
+| where domain == "complaints-cityofficialsfood.com"
+Answer: 9
+
+Still looking at the PassiveDNS records from question 27. We want to identify what IP address the domain resolved to at the time nearest to the time that the email was sent to the employee. Which IP address was did the domain resolved to at the time of the activity?
+Reminder: 2023-04-03T18:04:56Z
+Answer: 179.58.169.157
+
+Using a GeoIP service such as MaxMind (https://www.maxmind.com/en/geoip-demo) or Censys (https://search.censys.io), let's look up this IP address. What country does this IP address appear to be located in?
+Answer: Bolivia
+
+Let's check the InboundNetworkEvents table to see if that IP address had browsed around our Dai Wok Foods website before. How many records did you find related to that IP address? Answer 0 if there are none.
+InboundNetworkEvents
+| where src_ip == "179.58.169.157"
+Answer: 3
+
+What was the earliest thing the IP address searched for? Replace %20 with a space.
+Answer: store managers
+
+There were more IP addresses related to the domain from the suspicious email. Let's take all of them and search across the InboundNetworkEvents. How many records total were found?
+let ips=
+PassiveDns
+| where domain == "complaints-cityofficialsfood.com"
+| distinct ip;
+InboundNetworkEvents
+| where src_ip in (ips)
+Answer: 49
+
+When was the earliest timestamp observed in Q32?
+Answer: 2023-03-26T01:20:14.000Z
+
+Let's check the login attempts from our compromised employee in AuthenticationEvents. How many distinct source IP addresses were used by the employee to log in?
+AuthenticationEvents
+| where username == "jogarcia"
+| distinct src_ip
+Answer: 2
+Notes: 2.20.114.29, 192.168.3.86
+
+One IP looks like a private (local) IP address. What country is the other IP address from?
+Answer: Italy
+
+How many records in AuthenticationEvents are related to that IP address?
+AuthenticationEvents
+| where src_ip == "2.20.114.29"
+Answer: 12
+
+Let's go back to the suspicious email we first found in Q23. The link field has the domain name we've been tracking but also has a reference to a filename at the end of it. What is it?
+Answer: large_order.xlsx
+
+How many emails reference the same filename?
+Email
+| where link contains "large_order.xlsx"
+Answer: 13
+
+Let's search the FileCreationEvents table for this file. How many host machines have this file?
+FileCreationEvents
+| where filename contains "large_order.xlsx"
+Answer: 1
+
+Where was this file located on the host machine? Copy and paste the full path.
+Answer: C:\Users\jogarcia\Downloads\large_order.xlsx
+
+When was this file created on the host machine?
+Answer: 4/3/2023, 6:39:12 PM
+
+What's the SHA256 hash of this file?
+Answer: b9d3c969135f1e9abe22fd744c691ec1d1bc0853beffe5aed3f8b78b3d738501
+
+Let's use VirusTotal (https://www.virustotal.com/gui/home/search) to search for this SHA256 hash. Were there any results? Yes / No.
+Answer: no
+
+Let's look at the ProcessEvents table for this host machine. How many records are associated with this compromised host?
+ProcessEvents
+| where hostname == "LVJW-LAPTOP"
+Answer: 466
+
+Let's filter starting with the first time we saw the suspicious file created on Q41. What's the name of the file from the process_commandline that occurs not long after the file was created?
+ProcessEvents
+| where hostname == "LVJW-LAPTOP"
+| where timestamp > datetime(4/3/2023, 6:39:12 PM)
+Answer: c5k3fsys.3bp.ps1
+
+What's the parent_process_hash from Question 45?
+Answer: 662124b0c998fd0826c192514b1f57f8002f2ab031996aa6dd7832f561679779
+
+Using VirusTotal, search the parent_process_hash from Q46. What is the popular threat label for this hash?
+Answer: trojan.powershell/malgent
+
+What threat actor is this file associated with?
+Answer: FIN7
+Notes: I had to check the associated IP and search for that.
+
+What is the md5 hash of this file?
+Answer: d405909fd2fd021372444b7b36a3b806
+
+The indicator is referenced in a threat report by a well known cybersecurity company. What type of operations did the company mention this threat actor shifted to doing?
+Answer: ransomware
+
+
+Section 3: Chaos
+A law enforcement agency warned Dai Wok Foods that they may been targeted by a threat actor. This coincides with a lot of computers at different restaurants sites being locked out recently. The agency said the threat actor may have sent the malware with the file name "Local_County_Updates.xlsx". When was the first time this file was seen?
+Email
+| where link contains "Local_County_Updates.xlsx"
+Answer: 2023-05-12T09:22:48Z
+
+Who was the email sender?
+Answer: restaurant@verizon.com
+Notes: reply to - miguel_waters@hoisumsupplies.com, recipients - doreen_myers@daiwokfoods.com and william_perez@daiwokfoods.com, subject - [EXTERNAL] FW: News: Dai Wok major changes and updates, verdict - clean, link - http://operations-management.hk/published/share/share/modules/Local_County_Updates.xlsx
+
+Who was the reply_to email address?
+Answer: miguel_waters@hoisumsupplies.com
+
+Let's investigate our employees and see if they may have clicked on the link. When did the first employee click on the link?
+OutboundNetworkEvents
+| where url contains "Local_County_Updates.xlsx"
+Answer: 5/12/2023, 10:00:55 AM
+
+What's the role of the employee who clicked on the link?
+let ips=
+OutboundNetworkEvents
+| where url contains "Local_County_Updates.xlsx"
+| distinct src_ip;
+Employees
+| where ip_addr in (ips)
+| project role
+Answer: Ingredient Procurement
+
+(ADVANCED) Investigate all of the domains and emails associated with the threat actor. When is the first time this threat actor sent an email to Dai Wok Foods?
+Notes: The domain is - operations-management.hk
+let ip1=
+PassiveDns
+| where domain contains "operations-management.hk"
+| distinct ip;
+let dmn1=
+PassiveDns
+| where ip in (ip1)
+| distinct domain;
+let ip2=
+PassiveDns
+| where domain in (dmn1)
+| distinct ip;
+let dmn2=
+PassiveDns
+| where ip in (ip2)
+| distinct domain;
+Email
+| extend domainn = parse_url(link).Host
+| where domainn in (dmn2)
+Answer: 5/6/2023, 8:33:13 AM
+
+(ADVANCED) How many unique domains are associated with this threat actor?
+let ip1=
+PassiveDns
+| where domain contains "operations-management.hk"
+| distinct ip;
+let dmn1=
+PassiveDns
+| where ip in (ip1)
+| distinct domain;
+let ip2=
+PassiveDns
+| where domain in (dmn1)
+| distinct ip;
+let dmn2=
+PassiveDns
+| where ip in (ip2)
+| distinct domain;
+Email
+| extend domainn = parse_url(link).Host
+| where domainn in (dmn2)
+| distinct link
+Answer: 3
+
+(ADVANCED) How many malware files placed by the threat actor are still present across all of the Dai Wok host machines?
+let ip1=
+PassiveDns
+| where domain contains "operations-management.hk"
+| distinct ip;
+let dmn1=
+PassiveDns
+| where ip in (ip1)
+| distinct domain;
+let ip2=
+PassiveDns
+| where domain in (dmn1)
+| distinct ip;
+let dmn2=
+PassiveDns
+| where ip in (ip2)
+| distinct domain;
+let mal_dmns=
+Email
+| extend domainn = tostring(parse_url(link).Host)
+| where domainn in (dmn2)
+| distinct domainn;
+let mal_files=
+Email
+| where link has_any (mal_dmns)
+| extend file_path = parse_url(link).Path
+| extend file_name = tostring(parse_path(tostring(file_path)).Filename)
+| distinct file_name;
+let mal_hosts=
+FileCreationEvents
+| where filename in (mal_files)
+| distinct hostname;
+let mal_files2=
+FileCreationEvents
+| where hostname in (mal_hosts)
+| serialize 
+| extend next_files = next (filename)
+| where filename in (mal_files)
+| where next_files !in (mal_files)
+| distinct next_files;
+FileCreationEvents
+| where filename in (mal_files) or filename in (mal_files2)
+Answer: 13
+
+(ADVANCED) Which threat actor is this publicly reported as?
+Answer: Rorschach
+
+(ADVANCED) What is the MITRE ID for the technique used by the threat actor to execute malware payloads?
+Answer: T1574.002
+
+(ADVANCED) What is the SHA256 hash of the file used for the technique found in Q10?
+Answer: 4874d336c5c7c2f558cfd5954655cacfc85bcfcb512a45fb0ff461ce9c38b86d
+
+(ADVANCED) What legitimate process is being used by the threat actor from what you found for Q10?
+Answer: notepad.exe
+
+(ADVANCED) What file was used by the threat actor for Q10 but is no longer found on any of the host machines?
+ProcessEvents
+| where process_commandline has_any ("config.ini", "cy.exe", "libexpa.dll", "scvhost.exe")
+| serialize
+| extend next_command = next (process_commandline)
+Answer: winutils.dll
+
+What type of attack is this? What will likely happen soon?
+Answer: ransomware
+
+(ADVANCED) What command line argument did they use to delete things on a host machine?
+ProcessEvents
+| where process_commandline contains "delete"
+Answer: vssadmin.exe delete shadows /All /Quiet
+
+
+Section 4: (Bonus) Security Jeopardy
+In this type of attack, adversaries compromise software developers, hardware manufacturers, or service providers and use that access to target downstream users of the software, hardware, or service. SolarWinds was impacted by this type of compromise in 2020.
+Answer: supply chain
+
+Attackers often use this legitimate Windows feature as a way to establish persistence on a compromised device.
+Answer: Scheduled task
+
+In an ________-___-___-______ phishing attack, an attacker may steal credentials or cookies to bypass multi-factor authentication and gain access to critical systems.
+Answer: adversary-in-the-middle
+
+When using this technique, attackers guess many combinations of usernames and passwords in an attempt to access a system.
+Answer: brute force
+
+A ________ ______ attack is when an attacker uses common passwords to try to gain access to multiple accounts in a single environment.
+Answer: password spray
+
+This type of malware is designed to permanently erase data from an infected system.
+Answer: wiper
+
+This is a collection of databases for configuration settings for the Windows operating system.
+Answer: registry
+
+This describes techniques used by attackers to communicate with systems they control within a victim network.
+Answer: c2
+
+This happens when malware or a malicious actor carries out an unauthorized transfer of data from a system.
+Answer: exfiltration
+
+What binary-to-text encoding scheme is used to convert "hello world" to "aGVsbG8gd29ybGQ=".
+Answer: Base64
+
+In this type of attack, attackers gain unauthorized access to information, then release that information to the public, often in an attempt to exert influence.
+Answer: hack and leak
+
+This is a one-way cryptographic algorithm that converts an input of any length to an output of a fixed length.
+Answer: hash
+
+This is a cryptographic hashing function that outputs a value that is 256 bits long.
+Answer: Sha256
+
+This is the process of tracking and identifying the perpetrator of a cyber attack or intrusion.
+Answer: attribution
+
+This Twitter user, also known as "Hutch", co-authored the paper that introduced the kill chain to information security. (enter their @ username)
+Answer: killchain
+
+This Twitter user is the Director of Intel at Red Canary and an instructor for SANS FOR578. (enter their @ username)
+Answer: likethecoins
+
+In this type of attack, adversaries encrypt an organization's files and demand a payment in exchange for the decryption key.
+Answer: ransomware
+
+In this type of attack, adversaries gain access to an organization's intellectual property or other sensitive data and threatens to release the data publicly unless the organization pays the adversary.
+Answer: extortion
+
+This type of vulnerability is unknown to the people responsible for patching or fixing it.
+Answer: zero day
+
+In this phase of the kill chain, attackers try to gather as much information as possible about their victims.
+Answer: reconnaissance
+
+Attackers use this technique to probe victim infrastructure for vulnerabilities via network traffic.
+Answer: scanning
+
+This data source can be used to get additional information about registered users or assignees of an Internet resource, such as a domain name, an IP address block or an autonomous system.
+Answer: whois
+
+In this type of attack, adversaries compromise a legitimate website and add malicious code in an attempt to target users who visit that site.
+Answer: drive by
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
