@@ -1,0 +1,317 @@
+SUMMARY
+The learning objectives are:
+- Investigate the Techniques, Tactics, and Procedures of one threat actor operating against one victim.
+- Understand the exploitation of remote services as a initial access vector
+- How to interpret Security Logs to identify evidence of malicious activity
+- How to investigate a basic cybersecurity intrusion
+
+SOURCE
+https://kc7cyber.com/challenges/257
+
+STEPS TAKEN
+Section 1: Thicker Than A Snicker
+What is the name of the CEO at BBL Studios?
+Answer: Michaela Barnett
+Notes: IP - 10.10.1.1, email - carlos_stanley@bblbeatsstudio.com, username - mbarnett, hostname - EEDU-MACHINE
+
+What is the name of the Chief Music Producer?
+Employees
+| where role == "Chief Music Producer"
+Answer: MetroBus Boomin
+Notes: IP - 10.10.0.2, email - metro_boomin@bblbeatsstudio.com, username - meboomin, hostname - L8MI-MACHINE
+
+What is Darla's email address?
+Employees
+| where name =~ "Darla Smith"
+| project email_addr
+Answer: darla_smith@bblbeatsstudio.com
+
+What was the subject of the email sent to Darla?
+Email
+| where recipient == "darla_smith@bblbeatsstudio.com"
+| where sender == "admin@cosmeticsurgerybrazil.com"
+Answer: [EXTERNAL] FW: 💪 Why Do Pushups When You Can Look Like This with a BBL? 💪
+
+What was the link inside the email?
+Answer: https://getnewbodybrazil.com/files/online/images/sign_in
+
+What domain name was observed inside of that link?
+Answer: getnewbodybrazil.com
+
+What is Darla's IP address?
+Employees
+| where name == "Darla Smith"
+| project ip_addr
+Answer: 10.10.0.28
+
+Did Darla click on the malicious link in email? If so, copy and paste the timestamp of when she first clicked on the link.
+OutboundNetworkEvents
+| where src_ip == "10.10.0.28"
+| where url contains "getnewbodybrazil.com"
+Answer: 2024-07-15T10:47:09.000Z
+
+What url tells us that Darla entered her credentials on the phishing page? (Copy and paste the url.)
+Answer: https://getnewbodybrazil.com/files/online/images/sign_in?username=dasmith&password=**********
+
+Which one of the IPs logging to Darla's account is not like the others?
+let darla_user=
+Employees
+| where name == "Darla Smith"
+| project username;
+AuthenticationEvents
+| where username in (darla_user)
+| where timestamp between (datetime("2024-07-15") .. datetime("2024-07-20") )
+Answer: 253.104.180.97
+
+When do we see that IP logging into Darla's account? (enter the full timestamp)
+Answer: 2024-07-15T11:47:09.000Z
+
+Did Darla have 2-factor authentiation enabled?(yes/no)
+Employees
+| where name == "Darla Smith"
+| project mfa_enabled
+Answer: no
+
+What six letter command was executed on Darla machine after the suspicious login?
+let darla_host=
+Employees
+| where name == "Darla Smith"
+| project hostname;
+ProcessEvents
+| where hostname in (darla_host)
+| where timestamp between (datetime("2024-07-14") .. datetime("2024-07-18"))
+Answer: whoami
+
+How many of these discovery commands do we see on Darla's machine?
+Answer: 6
+
+They ran a command to find information about the Studio's 'marketing strategy' and saved it to a .txt file. What is the name of the file that they save this information to?
+let darla_host=
+Employees
+| where name == "Darla Smith"
+| project hostname;
+ProcessEvents
+| where hostname in (darla_host)
+| where timestamp between (datetime("2024-08-01") .. datetime("2024-08-02"))
+Answer: marketing_files_list.txt
+
+What common folder did the theat actor target to steal documents?
+Answer: Documents
+
+What is the name of the tool the threat actor used to prepare the data for exfiltration?
+Answer: 7zip
+
+What is the name of the file in which they stored their commands?
+Answer: ftp_commands.txt
+
+What IP did Darla send the most amount of data to?
+let darla_ip=
+Employees
+| where name == "Darla Smith"
+| project ip_addr;
+NetworkFlow
+| where src_ip in (darla_ip)
+| summarize sum(bytes) by dest_ip
+Answer: 182.136.239.46
+
+What command did the threat actors to delete all the stolen files?
+let darla_host=
+Employees
+| where name == "Darla Smith"
+| project hostname;
+ProcessEvents
+| where hostname in (darla_host)
+| where timestamp between (datetime("2024-08-01") .. datetime("2024-08-05"))
+Answer: del C:\\Users\\dasmith\\Documents\\Exfil\\*
+
+
+Section 2: Sneak Dissin
+What IP was used to search for unreleased diss tracks at Beats Studios?
+InboundNetworkEvents
+| where url contains "unreleased"
+Answer: 116.236.111.174
+
+How many total requests do we see from this IP?
+InboundNetworkEvents
+| where src_ip == "116.236.111.174"
+Answer: 16
+
+The threat actor behind this IP was searching the location of what server?
+Answer: production
+
+Complete this: Which one is better? _______________
+Answer: money, power, or respect
+
+What was the most common domain that resolved to the threat actor's IP?
+PassiveDns
+| where ip == "116.236.111.174"
+| summarize count() by domain
+Answer: lytpackhacks.com
+Notes: other - sneakdisstools.com
+
+What was the other domain that resolved to that IP?
+Answer: sneakdisstools.com
+
+What additional IP did these domains resolve to?
+PassiveDns
+| where domain == "lytpackhacks.com" or domain == "sneakdisstools.com"
+| project ip
+Answer: 229.50.59.91
+
+This activity surprisingly leads to the download of a xmrig.exe file. You take this fresh new intel to your ProcessEvents logs and get several hits. How many processes do you see on your network that make reference to an xmrig.exe file?
+ProcessEvents
+| where process_commandline contains "xmrig.exe"
+Answer: 32
+
+Hackers use xmrig.exe to mine for _
+Answer: cryptocurrency
+
+Which host did we first see this command on?
+Answer: YBI4-MACHINE
+
+When did we observe the xmrig.exe on that machine?
+Answer: 2024-06-10T15:42:29.000Z
+
+What command did the threat actors run to establish persistence?
+ProcessEvents
+| where timestamp >= datetime(2024-06-10T15:42:29.000Z)
+| where hostname == "YBI4-MACHINE"
+Answer: C:\Windows\System32\schtasks.exe /Create /SC MINUTE /TN "Update service for Windows Service" /TR "PowerShell.exe -ExecutionPolicy bypass -windowstyle hidden -File C:\Users\Administrator\update.ps1" /MO 30 /F
+
+What message did they leave to tell you what they had done?
+ProcessEvents
+| where timestamp >= datetime(2024-06-17T12:00:00.000Z)
+| where hostname == "YBI4-MACHINE"
+Answer: I just installed a cryptomineeeeeerrrrrrrrrrrrrr
+
+What second message did they leave to rub salt in the wound?
+Answer: They not like us, they not like us
+
+How many user_agents were used to log in to more than one of the compromised hosts?
+let hostnames = ProcessEvents
+| where process_commandline has "xmrig.exe"
+| distinct hostname;
+AuthenticationEvents
+| where hostname in (hostnames)
+| summarize dcount(hostname) by user_agent
+Answer: 13
+
+How many of those user_agents were used to log in to all of the compromised hosts?
+Answer: 9
+
+How many failures did we did we see from user agent "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_9_1; en-US) Gecko/20100101 Firefox/70.0"?
+AuthenticationEvents
+| where user_agent == "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_9_1; en-US) Gecko/20100101 Firefox/70.0"
+| summarize count() by result
+Answer: 592
+
+What was the most prevalent IP used by the threat actor when this user agent was present?
+AuthenticationEvents
+| where user_agent == "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_9_1; en-US) Gecko/20100101 Firefox/70.0"
+| summarize count() by src_ip
+Answer: 116.236.111.174
+
+What kind of attack did the threat actor use as an initial access vector?
+AuthenticationEvents
+| where user_agent == "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_9_1; en-US) Gecko/20100101 Firefox/70.0"
+| summarize count(hostname) by password_hash
+Answer: password spray
+
+What is the MITRE ATT&CK technique ID for this attack type?
+Answer: T1110
+
+
+Section 3: Certified Petabyte
+Whose bios were they looking for?
+InboundNetworkEvents
+| where url contains "bio"
+Answer: company executive
+
+What is the filename of the note displayed on the producer's computer?
+let chief_host=
+Employees
+| where role contains "Chief Music Producer"
+| project hostname;
+FileCreationEvents
+| where hostname in (chief_host)
+Answer: DROP_AND_GIVE_ME_FIFTY.txt
+
+What was the file extension of the locked files?
+Answer: 616
+
+One of the files that was locked on the producer's machine references musical productions that have not yet gone public. What was the name of this locked file?
+let chief_host=
+Employees
+| where role contains "Chief Music Producer"
+| project hostname;
+FileCreationEvents
+| where hostname in (chief_host)
+| where filename contains "616"
+Answer: unreleased_beatz.mp3.616
+
+He even mentioned that he installed the Server Update every time he was asked to. He knew dropping these beats was too important to not keep things patched up. When was the first time this update was installed?
+let chief_host=
+Employees
+| where role contains "Chief Music Producer"
+| project hostname;
+ProcessEvents
+| where hostname in (chief_host)
+| where process_commandline contains "update" and process_commandline contains "server"
+Answer: 2024-07-29T15:48:38.000Z
+
+The adversary captured process commands from the chief producer's computer. What file did they write these process commands to?
+Answer: process_list.txt
+
+What is the name of the executable that was used to deploy the ransomware, leading to the encryption of the files? (hint we see it right after the ransom note)
+let chief_host=
+Employees
+| where role contains "Chief Music Producer"
+| project hostname;
+FileCreationEvents
+| where hostname in (chief_host)
+| where timestamp >= datetime(2024-08-02T15:36:34.000Z)
+Answer: kdot.exe
+
+Did the threat actors exploit any vulnerabilities? If so, what vulnerability did they exploit? (one word)
+Answer: ProxyShell
+
+Which employee's email account was leveraged by the threat actor to gain access to BBL Beats Studio?
+
+
+
+
+After gaining access, the threat actor downloaded a tool to help them compromise the producer. What domain did they download this tool from
+
+What domain did the threat actors use as a C2 channel?
+
+The initial compromise was not enough, the threat actors needed more. They used a specific subject to social engineer their way into more access. What subject did they use?
+
+The threat actors found the secret files there were looking for on a network share. What was the name of this network share? (Provide just the name of the shared drive)
+
+The threat actors exfiltrated the most important files by staging them in a special folder. What was the name of this folder?
+
+Oh no! Not only did the beats get encrypted, Dwake just dropped a track rapping over them! What filename did the threat actor rename this sensitive data to?
+
+What IP did they use?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
