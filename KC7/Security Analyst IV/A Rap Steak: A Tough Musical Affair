@@ -281,39 +281,52 @@ InboundNetworkEvents
 Answer: Post Malone
 
 After gaining access, the threat actor downloaded a tool to help them compromise the producer. What domain did they download this tool from?
-
-
+OutboundNetworkEvents
+| where url has_any ("RunPsScript.dll", "Microsoft.PackageManagement.MsuProvider.dll", "MotionController_Hero.jpg", "ipsar.xml", "en-US.PhoneNumber.model", "ntuser.dat", "ntuser.dat.LOG", "Desktop", "Documents", "Downloads", "Music", "Desktop.ini", "HoloTile.glb", "LsaIso.exe", "illustration-UploadToOD.svg", "Microsoft.MicrosoftSolitaireCollection.exe", "ContainExactly.Tests.ps1", "item.jpg", "skin.wav", "respond.doc", "study.gif", "collection.tiff", "discord.exe", "hour.doc", "meet.doc", "around.mp4", "myself.pptx", "other.png")
+| where method == "GET"
+Answer: invisibleupdates.com
+Notes: 7/29/2024, 3:48:04 PM
 
 What domain did the threat actors use as a C2 channel?
+Answer: certifiedpedabyte.com
 
 The initial compromise was not enough, the threat actors needed more. They used a specific subject to social engineer their way into more access. What subject did they use?
+let comp_users=
+ProcessEvents
+| where timestamp >= datetime(2024-07-29T15:48:07.000Z)
+| where timestamp <= datetime(2024-08-02T11:49:02.000Z)
+| distinct username;
+let comp_emails=
+Employees
+| where username in (comp_users)
+| project email_addr;
+Email
+| where recipient in (comp_emails)
+|where link has_any ("RunPsScript.dll", "Microsoft.PackageManagement.MsuProvider.dll", "MotionController_Hero.jpg", "ipsar.xml", "en-US.PhoneNumber.model", "ntuser.dat", "ntuser.dat.LOG", "Desktop", "Documents", "Downloads", "Music", "Desktop.ini", "HoloTile.glb", "LsaIso.exe", "illustration-UploadToOD.svg", "Microsoft.MicrosoftSolitaireCollection.exe", "ContainExactly.Tests.ps1", "item.jpg", "skin.wav", "respond.doc", "study.gif", "collection.tiff", "discord.exe", "hour.doc", "meet.doc", "around.mp4", "myself.pptx", "other.png")
+| distinct subject
+Answer: Urgent: Update Required for Music Production Server
 
 The threat actors found the secret files there were looking for on a network share. What was the name of this network share? (Provide just the name of the shared drive)
+ProcessEvents
+| where hostname == "L8MI-MACHINE"
+| where timestamp >= datetime(2024-07-29T15:48:07.000Z)
+Answer: super-secret-music-share
 
 The threat actors exfiltrated the most important files by staging them in a special folder. What was the name of this folder?
+ProcessEvents
+| where hostname == "L8MI-MACHINE"
+| where timestamp >= datetime(2024-07-29T15:48:07.000Z)
+Answer: aspnet_client
 
 Oh no! Not only did the beats get encrypted, Dwake just dropped a track rapping over them! What filename did the threat actor rename this sensitive data to?
+ProcessEvents
+| where hostname == "L8MI-MACHINE"
+| where timestamp >= datetime(2024-07-29T15:48:07.000Z)
+C:\Windows\System32\powershell.exe -Nop -ExecutionPolicy bypass -Command "$enc = 'QzpcV2luZG93c1xTeXN0ZW0zMlxwb3dlcnNoZWxsLmV4ZSAtTm9wIC1FeGVjdXRpb25Qb2xpY3kgYnlwYXNzIC1Db21tYW5kICIkcmV2ID0gJ3Bpei55enppcmRfbGJiXHNkYW9sbndvRFxuaW1vb2JlbVxzcmVzVVw6QyBwaXouYXRhZF9ldml0aXNuZXNcOlogeXBvYyc7JHJldls6Oi0xXSI=';[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($enc))"
+Answer: bbl_drizzy.zip
 
 What IP did they use?
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+PassiveDns
+| where domain contains "invisibleupdates"
+| project ip
+Answer: 43.24.78.54
