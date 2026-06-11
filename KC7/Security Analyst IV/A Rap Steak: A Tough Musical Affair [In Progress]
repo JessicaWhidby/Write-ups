@@ -276,11 +276,13 @@ Did the threat actors exploit any vulnerabilities? If so, what vulnerability did
 Answer: ProxyShell
 
 Which employee's email account was leveraged by the threat actor to gain access to BBL Beats Studio?
+InboundNetworkEvents
+| where url contains "%40" //URL encoded for @
+Answer: Post Malone
+
+After gaining access, the threat actor downloaded a tool to help them compromise the producer. What domain did they download this tool from?
 
 
-
-
-After gaining access, the threat actor downloaded a tool to help them compromise the producer. What domain did they download this tool from
 
 What domain did the threat actors use as a C2 channel?
 
