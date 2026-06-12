@@ -1,0 +1,162 @@
+SUMMARY
+Jus de Chaussette, a trendy French sock company, has received an extortion email. As an intern at a cybersecurity firm, you work alongside your mentor Mio to investigate whether the attackers really stole sensitive data.
+
+Your investigation traces the full attack chain: from a malicious file uploaded through the company's contact form, through credential dumping and customer database theft, to internal phishing targeting the CEO and CFO, and finally exfiltration of confidential files.
+
+LEARNING OBJECTIVES
+- Investigate an extortion incident from initial alert to full attack reconstruction
+- Trace data staging and exfiltration using legitimate Windows tools (bitsadmin, Winrar)
+- Identify credential dumping tools (LaZagne) and their targets
+- Recognize command and control channels (dnscat2 over DNS)
+- Follow internal phishing from compromised employee accounts
+- Pivot across tables using KQL lookup and let statements
+- Trace initial access through web application abuse (file upload forms)
+- Connect attacker infrastructure using PassiveDNS pivoting
+
+SOURCE
+https://kc7cyber.com/challenges/355
+
+STEPS TAKEN
+Section 1: Sock Savior
+How many emails does your query return?
+Email
+| where subject == 'Pay up or the world will know your lies'
+Answer: 3
+
+What email address did the threat actor use to send the extortion mail?
+Answer: theempireownsyou@proton.me
+
+What is the name of the highest ranking employee?
+Email
+| where subject == 'Pay up or the world will know your lies'
+| distinct recipient
+| lookup Employees on $left.recipient == $right.email_addr
+Answer: Cho Cetkipu
+
+Immediately you notice some suspicious commands. They're all coming from the cmd.exe process. What is the first command you see coming from that process?
+ProcessEvents
+| where hostname in ('SCHR-MACHINE', '9RGD-MACHINE')
+| where timestamp between (datetime(2024-08-30T00:00:00Z) .. datetime(2024-08-31T00:00:00Z))
+Answer: net use Z: \\Server\Contracts\Hidden
+
+To which folder was the data copied? (only paste the part after the username in the path)
+Answer: Downloads\notfrench
+
+What password are they using to protect the archive?
+Answer: sn3@ky
+
+That's a legitimate Windows tool. It allows you to create transfer jobs that will run in the background. You can upload or download data this way. What is the name of that legitimate Windows tool?
+Answer: bitsadmin
+
+What is the name of the domain to which the archived files were sent?
+Answer: liarliarsocksonfire.net
+
+They got someone else. What is the username of that employee?
+ProcessEvents
+| where not(hostname in ('SCHR-MACHINE', '9RGD-MACHINE'))
+| where process_commandline has 'bitsadmin'
+| distinct username
+Answer: mioz
+
+What is the role of the employee?
+Employees
+| where username == 'mioz'
+Answer: Customer Service Pinky Toe
+
+What is the name of the file that was archived, staged in the Downloads folder?
+ProcessEvents
+| where username == 'mioz'
+| where process_commandline has 'feetlover.rar'
+Answer: Customers.csv
+
+Which software does that process belong to?
+ProcessEvents
+| where username == 'mioz'
+| where process_commandline has 'Customers.csv'
+Answer: DbVisualizer
+
+What tool was used to dump credentials for the database and from LSASS memory?
+ProcessEvents
+| where username == 'mioz'
+| where timestamp <= datetime(2024-08-18T21:34:16Z)
+| order by timestamp desc
+Answer: LaZagne
+
+The hackers ran a command that helped them figure out which software was used for database management, and that ultimately allowed them to use the right LaZagne command to get the relevant credentials. What was this recon command?
+Answer: wmic product get name
+
+It looks like the threat actor downloaded LaZagne via Powershell, using Invoke-WebRequest. What other tool was downloaded the same way?
+Answer: dnscat2
+
+What domain was used to establish the C2 channel?
+Answer: thesockwhisperer.com
+
+They manage to get a copy of the "picture". As you suspected, it was not a picture at all, but a text file masquerading as one. It looks like it was supposed to drop a Powershell script on the infected machine. Back in the Azure Data Explorer, you switch to FileCreationEvents to look for any powershell file that might have appeared inbetween the time the "picture" was opened and the time dnscat2 was downloaded. What is the name of the Powershell script you found?
+FileCreationEvents
+| where username == 'mioz'
+| where timestamp between (datetime(2024-08-18T16:10:29Z) .. datetime(2024-08-18T16:58:29Z))
+Answer: talking_socks.ps1
+
+Did Mike Oz receive the file via email? (yes/no)
+Email
+| where recipient == 'mike_oz@jusdechaussette.fr'
+| where link contains 'holesinmysocks.jpeg'
+Answer: no
+
+When was the file successfully uploaded via the contact form?
+InboundNetworkEvents
+| where url contains 'holesinmysocks.jpeg'
+Answer: 2024-08-18T14:02:52.000Z
+
+What domain did the IP resolve to?
+PassiveDns
+| where ip == '193.233.125.78'
+| distinct domain
+Answer: thesockwhisperer.com
+
+How many IP addresses are linked to the two domains?
+PassiveDns
+| where domain in ('thesockwhisperer.com', 'liarliarsocksonfire.net')
+| distinct ip
+Answer: 3
+
+How many times did the threat actor browse to the company's website?
+let hacker_ips =
+PassiveDns
+| where domain in ('thesockwhisperer.com', 'liarliarsocksonfire.net')
+| distinct ip;
+InboundNetworkEvents
+| where src_ip in (hacker_ips)
+| count
+Answer: 25
+
+What search involving 'feet' did they make?
+let hacker_ips =
+PassiveDns
+| where domain in ('thesockwhisperer.com', 'liarliarsocksonfire.net')
+| distinct ip;
+InboundNetworkEvents
+| where src_ip in (hacker_ips)
+| where url contains "feet"
+| project decoded_url = url_decode(url)
+Answer: why are people posting their feet on this website omg
+
+What was the subject of the email sent from Mike's email address?
+Email
+| where sender == 'mike_oz@jusdechaussette.fr'
+| where recipient in ('cho_cetkipu@jusdechaussette.fr','brooke_entoe@jusdechaussette.fr')
+Answer: Le President loves our latest design! Opportunity for presidential socks??? $$$$
+
+When was the link first clicked?
+Email
+| where sender == 'mike_oz@jusdechaussette.fr'
+| where recipient in ('cho_cetkipu@jusdechaussette.fr','brooke_entoe@jusdechaussette.fr')
+| distinct link
+| lookup OutboundNetworkEvents on $left.link == $right.url
+Answer: 2024-08-19T14:51:05.000Z
+
+What new file is spawned right after the docx file is downloaded?
+FileCreationEvents
+| where timestamp > datetime(2024-08-19T14:51:05Z)
+| where hostname in ('9RGD-MACHINE', 'SCHR-MACHINE')
+Answer: talking_socks.ps1
