@@ -1,0 +1,313 @@
+SUMMARY
+Learn clustering and attribution by analyzing multiple intrusions against a fictitious research company called EnvolveLabs. This is a good example of ways attribution can be challenging.
+- How to apply foundational security analysis skills to analyze security log data
+- How to “pivot” between datasets using indicators or patterns of interest
+- How to identify tactics, techniques, and procedures (TTPs) based on observed threat activity
+- How to cluster patterns of threat activity based on overlaps in adversary tradecraft and TTPs
+
+SOURCE
+https://kc7cyber.com/challenges/29
+
+STEPS TAKEN
+Section 1: KQL 101
+How many employees are in the company?
+Employees
+| count
+Answer: 1001
+
+Which employee has the IP address: 192.168.0.191?
+Employees
+| where ip_addr == "192.168.0.191"
+Answer: Mary Cook
+
+How many emails did Laura Parrish receive?
+let laura_email=
+Employees
+| where name =="Laura Parrish"
+| project email_addr;
+Email
+| where recipient in (laura_email)
+| count
+Answer: 9
+
+How many Envolve Labs employees received emails with the term vaccine in the subject?
+Email
+| where subject contains "vaccine"
+| where recipient contains "envolvelabs.com"
+| distinct recipient
+Answer: 676
+
+How many distinct urls did Keith Floyd visit?
+let keith_ip=
+Employees
+| where name == "Keith Floyd"
+| project ip_addr;
+OutboundBrowsing
+| where src_ip in (keith_ip)
+| distinct url
+Answer: 6
+
+How many domains in the PassiveDns records contain the word vaccine?
+PassiveDns
+| where domain contains "vaccine"
+| distinct domain
+Answer: 7
+
+What IP did the domain vaccine.net resolve to?
+PassiveDns
+| where domain == "vaccine.net"
+| project ip
+Answer: 58.235.85.30
+
+How many unique URLs were browsed by employees named Karen?
+let karen_ips=
+Employees
+| where name contains "Karen"
+| project ip_addr;
+OutboundBrowsing
+| where src_ip in (karen_ips)
+| distinct url
+Answer: 43
+
+
+Section 2: Clustering and Attribution
+Which user has the file named ResearchBibliographyGenerator.zip on their machine?
+let comp_host=
+FileCreationEvents
+| where filename == "ResearchBibliographyGenerator.zip"
+| project hostname;
+Employees
+| where hostname in (comp_host)
+| project name
+Answer: Terry Simpson
+
+When did this user download ResearchBibliographyGenerator.zip?
+let comp_host=
+FileCreationEvents
+| where filename == "ResearchBibliographyGenerator.zip"
+| project hostname;
+let comp_ip=
+Employees
+| where hostname in (comp_host)
+| project ip_addr;
+OutboundBrowsing
+| where src_ip in (comp_ip)
+| where url contains "ResearchBibliographyGenerator"
+Answer: 2022-01-07T13:24:12.3286130Z
+
+What domain did the user download the file from?
+Answer: disarm-remarkable.science
+
+What was the subject of the email that delivered the file?
+let comp_host=
+FileCreationEvents
+| where filename == "ResearchBibliographyGenerator.zip"
+| project hostname;
+let comp_ip=
+Employees
+| where hostname in (comp_host)
+| project ip_addr;
+let bad_url=
+OutboundBrowsing
+| where src_ip in (comp_ip)
+| where url contains "ResearchBibliographyGenerator"
+| project url;
+Email
+| where link in (bad_url)
+Answer: Research opportunties! Apply today
+
+Who was the email sent by?
+Answer: john-n-johnmoderno@yahoo.com
+
+Let's look at emails sharing the same subject. What other domain was seen in the links?
+let comp_host=
+FileCreationEvents
+| where filename == "ResearchBibliographyGenerator.zip"
+| project hostname;
+let comp_ip=
+Employees
+| where hostname in (comp_host)
+| project ip_addr;
+let bad_url=
+OutboundBrowsing
+| where src_ip in (comp_ip)
+| where url contains "ResearchBibliographyGenerator"
+| project url;
+let sus_subject=
+Email
+| where link in (bad_url)
+| project subject;
+Email
+| where subject in (sus_subject)
+| distinct link
+Answer: deprived.tech
+
+What was the interview-themed subject line sent by the threat actor's email address?
+Email
+| where subject has_any ("interview","job")
+Answer: Interview Request - Recent research article
+
+Which FDA-themed email address sent an email with that subject line?
+Answer: pfizar.fda@hotmail.com
+
+Check the PassiveDns table for domains that resolve to the same IP addresses. What other .science domain is closely associated with this cluster of activity?
+let sus_ips=
+PassiveDns
+| where domain contains "disarm-remarkable.science" or domain contains "illness.med" or domain contains "deprived.tech"
+| project ip;
+PassiveDns
+| where ip in (sus_ips)
+| project domain
+Answer: vaccine.science
+
+Which .dll file was created on the victim's machine shortly after ResearchBibliographyGenerator.zip was downloaded?
+let comp_host=
+FileCreationEvents
+| where filename == "ResearchBibliographyGenerator.zip"
+| project hostname;
+FileCreationEvents
+| where filename contains ".dll"
+| where timestamp > datetime(2022-01-07T13:24:12.3286130Z)
+| where hostname in (comp_host)
+Answer: updater.dll
+
+What file name is this DLL listed under on VirusTotal?
+Answer: S4ZD8JVW.dat
+
+Which six-letter reconnaissance command was executed on that user's machine?
+let comp_host=
+FileCreationEvents
+| where filename == "ResearchBibliographyGenerator.zip"
+| project hostname;
+ProcessEvents
+| where timestamp > datetime(2022-01-07T13:24:12.3286130Z)
+| where hostname in (comp_host)
+Answer: whoami
+
+What IP address does the DLL beacon to?
+Answer: 199.57.49.250
+
+What is the domain name of the legitimate service the adversary used to exfiltrate data?
+Answer: pastebin.com
+
+
+Section 3: Phishing and More
+Someone reported a phishing email from the sender gaara@qq.com. You pull up the emails and notice the links inside look suspicious. How many domains were observed in the links from these emails?
+Email
+| where sender == "gaara@qq.com"
+| extend domain = tostring(parse_url(link).Host)
+| distinct domain
+Answer: 4
+
+Which one of these domains was used the least?
+let links=
+Email
+| where sender == "gaara@qq.com"
+| distinct link;
+OutboundBrowsing
+| where url in (links)
+| summarize count() by url
+Answer: clan.io
+
+What was the subject line of the emails containing the domain clan.io?
+Email
+| where link contains "clan.io"
+| project subject
+Answer: 50% discount on Naruto anime this weekend
+
+What is the name of the user who clicked on the clan.io link?
+let phished_ip=
+OutboundBrowsing
+| where url contains "clan.io"
+| project src_ip;
+Employees
+| where ip_addr in (phished_ip)
+| project name
+Answer: Erica Wilson
+
+What actor IP was used to compromise the account of this user?
+let phished_ip=
+OutboundBrowsing
+| where url contains "clan.io"
+| project src_ip;
+let phished_username=
+Employees
+| where ip_addr in (phished_ip)
+| project username;
+AuthenticationEvents
+| where username in (phished_username)
+| project src_ip
+Answer: 223.80.243.56
+
+How many accounts did the actor compromise using the IP identified earlier?
+AuthenticationEvents
+| where src_ip == "223.80.243.56"
+| where result contains "success"
+| distinct username
+Answer: 8
+
+What .info domain shared IPs with domain clan.io?
+let bad_ip=
+PassiveDns
+| where domain == "clan.io"
+| project ip;
+PassiveDns
+| where ip in (bad_ip)
+| where domain contains ".info"
+| project domain
+Answer: arbiters-tail.info
+
+Which password (hash) was used in failed login attempts against 40 unique accounts?
+let internal_ip=
+Employees
+| project ip_addr;
+let comp_users=
+AuthenticationEvents
+| where result contains "Failed"
+| where src_ip !in (internal_ip)
+| distinct username;
+AuthenticationEvents
+| where username in (comp_users)
+| summarize dcount(username) by password_hash
+Answer: 1a594fcb-ac60-6f03-bea6-39dd3fdba026
+
+The login activity exhibited by the user agent above is an example of this attack (2 words)?
+Answer: password spray
+
+We can pivot off of the IPs we can find by looking at the PassiveDNS results associated with the domain swindled.bio. Looking at their web requests, what terms are they looking for on the company website?
+let bad_ips=
+PassiveDns
+| where domain contains "swindled.bio"
+| project ip;
+InboundBrowsing
+| where src_ip in (bad_ips)
+| where url contains "query"
+Answer: research priorities
+
+An employee was targeted at 21:52 on January 7th, 2022 from the IP you identified earlier. But this wasn't the attacker's first interaction with this user. Which threat actor domain was used to initially target this user via phishing?
+AuthenticationEvents
+| where src_ip == "223.80.243.56"
+| where timestamp between (datetime(1/7/2022) .. datetime(1/8/2022))
+Targeted username: jequerta
+let phished_email=
+Employees
+| where username == "jequerta"
+| project email_addr;
+Email
+| where recipient in (phished_email)
+Answer: activists.tk
+
+The attacker used that domain to go after someone specific. They weren't casting a wide net this time, they had a target in mind, and it was someone in IT. Who was the IT associate targeted using the domain from the previous question?
+let phished_role=
+Employees
+| where role contains "IT"
+| project email_addr;
+let phished_email=
+Email
+| where recipient in (phished_role)
+| where link contains "activists.tk"
+| project recipient;
+Employees
+| where email_addr in (phished_email)
+| project name
+Answer: Blake Welsh
