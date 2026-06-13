@@ -1,0 +1,478 @@
+SUMMARY
+The Valdorian Times has published another groundbreaking article ahead of the election. This time, it's about the incumbent mayoral candidate. According to the Times, the Mayor took bribes from FramtidX, a development company, to allow them to build a mall on protected land, a special marsh home to endangered frogs. Is this another fake story published by the Times, or is there any truth to it?
+
+LEARNING OBJECTIVES
+- Investigate website defacement and trace it to compromised credentials
+- Identify internal spearphishing campaigns tailored to employee roles
+- Recognize credential harvesting through fake login pages
+- Trace file manipulation: deletion, download, and renaming
+- Follow email collection, staging, and chunked exfiltration
+- Understand hacktivist motivations versus financially-motivated attackers
+- Map reconnaissance activity to target selection
+
+SOURCE
+https://kc7cyber.com/challenges/227
+
+STEPS TAKEN
+Section 1: Maybe It's Just A Tadpole?
+What is the MITRE ATT&CK ID for defacement?
+Answer: T1491
+
+Who is the Web Administrator? (Paste the full name.)
+Employees
+| where role == 'Web Administrator'
+Answer: Anita Bath
+
+What is the hostname of the Web Administrator machine?
+Answer: MYZB-LAPTOP
+
+When did the defacement happen exactly? (Paste the full timestamp.)
+ProcessEvents
+| where hostname == 'MYZB-LAPTOP'
+| where process_commandline has 'Shadow Truth'
+Answer: 2024-07-10T11:45:50.000Z
+
+When was the first image uploaded?
+ProcessEvents
+| where hostname == 'MYZB-LAPTOP'
+| where process_commandline contains "frog_mall_meme"
+Answer: 2024-07-10T10:53:37.000Z
+
+What is the Sha256 hash of the first meme that was uploaded to the webserver?
+FileCreationEvents
+| where hostname == 'MYZB-LAPTOP'
+| where filename startswith "frog_mall_meme"
+Answer: 9880c2d74afb2e57c7de7b9d6d0976112887502bb80344d35df34e774628dba0
+
+What domain were the images downloaded from?
+let anita_ip=
+Employees
+| where name == "Anita Bath"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (anita_ip)
+| where url contains "frog_mall_meme"
+| extend domain = parse_url(url).Host
+| distinct tostring(domain)
+Answer: ronniesdankmemes.com
+
+Which command did the attacker use to look for files containing passwords?
+ProcessEvents
+| where hostname == 'MYZB-LAPTOP'
+| where process_commandline has 'password'
+Answer: Get-ChildItem -Path C:\Users\anbath\Documents\* -Include *password* -Recurse
+
+What is the name of the file containing passwords?
+ProcessEvents
+| where hostname == 'MYZB-LAPTOP'
+| where process_commandline contains 'passwords'
+Answer: mypasswordsnstuff.txt
+
+The command you just found containing Anita's password shows they exfiltrated the file to a domain they control. What is the name of that domain?
+Answer: newdevelopmentupdates.org
+
+What is the last IP address that the domain you found in Q11 resolve to?
+PassiveDns
+| where domain == "newdevelopmentupdates.org"
+Answer: 239.72.6.37
+
+Do the IPs found in Q11 resolve to other domains? If they do, answer with the domain. If not, type no.
+PassiveDns
+| where domain == "newdevelopmentupdates.org"
+| distinct ip
+| lookup PassiveDns on ip
+| distinct domain
+Answer: greenprojectnews.net
+
+What version of Firefox is the threat actor using?
+let anita_user=
+Employees
+| where name == "Anita Bath"
+| project username;
+let TA_ips=
+PassiveDns
+| where domain == "newdevelopmentupdates.org"
+| distinct ip;
+AuthenticationEvents
+| where src_ip in (TA_ips)
+| where username in (anita_user)
+Answer: 3.6.11
+
+What is Anita’s email address?
+Employees
+| where name == "Anita Bath"
+| project email_addr
+Answer: anita_bath@framtidxdevcorp.com
+
+What is the subject of the email she received?
+let TA_domains=
+PassiveDns
+| where domain == "newdevelopmentupdates.org"
+| distinct ip
+| lookup PassiveDns on ip
+| distinct domain;
+Email
+| where recipient == "anita_bath@framtidxdevcorp.com"
+| where link has_any(TA_domains)
+Answer: Web Server Credentials Update
+
+What is the link attached to that email?
+Answer: https://greenprojectnews.net/share/modules/files/share/enter
+
+When did Anita click on the link? (Paste the full timestamp.)
+OutboundNetworkEvents
+| where src_ip == '10.10.0.8'
+| where url == 'https://greenprojectnews.net/share/modules/files/share/enter'
+Answer: 2024-06-26T15:24:20.000Z
+
+There might even be traces of her typing her credentials in. What is the full url showing her doing just that?
+OutboundNetworkEvents
+| where src_ip == '10.10.0.8'
+| where url startswith 'https://greenprojectnews.net/share/modules/files/share/enter'
+|  where url has "username"
+Answer: https://greenprojectnews.net/share/modules/files/share/enter?username=anbath&password=**********
+
+Who sent Anita the mail?
+let anita_email=
+Employees
+| where name == "Anita Bath"
+| project email_addr;
+Email
+| where recipient in (anita_email)
+| where link startswith "https://greenprojectnews.net"
+Answer: alex_johnson@framtidxdevcorp.com
+
+
+Section 2: KQL 101
+How many employees work at FramtidX?
+Employees
+| count
+Answer: 755
+
+What is the CEO’s name?
+Employees
+| where role == "CEO"
+Answer: Johanna Karlsson
+
+How many emails did Mona Hunter receive?
+let mona_email=
+Employees
+| where name == "Mona Hunter"
+| project email_addr;
+Email
+| where recipient in (mona_email)
+| count
+Answer: 24
+
+How many distinct senders were seen in the email logs from techinnovators.io?
+Email
+| where sender has "techinnovators.io"
+| distinct sender
+| count
+Answer: 675
+
+How many distinct websites did Mona Hunter visit?
+let mona_ip=
+Employees
+| where name == "Mona Hunter"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (mona_ip)
+| distinct url
+| count
+Answer: 46
+
+How many distinct domains in the PassiveDns records contain the word green?
+PassiveDns
+| where domain contains "green"
+| distinct domain
+| count
+Answer: 11
+
+How many distinct URLs did employees with the first name Dorothy visit?
+let dorothy_ips=
+Employees
+| where name has "Dorothy"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (dorothy_ips)
+| distinct url
+Answer: 419
+
+How many authentication attempts did we see to the accounts of employees with the first name Dorothy?
+let dorothy_usernames=
+Employees
+| where name has "Dorothy"
+| distinct username;
+AuthenticationEvents
+| where username in (dorothy_usernames)
+| count
+Answer: 490
+
+
+Section 3: Alright It's Definitely an Angry Frog or Two
+What is the name of Erik Bjorn’s colleague?
+Employees
+| where role == "Chief Architect"
+| where name != "Erik Bjorn"
+Answer: Sofia Lindgren
+
+You check to see if the Chief Architects received emails from the same internal address you found when investigating Anita. What is the subject of these emails?
+let arch_emails=
+Employees
+| where role == "Chief Architect"
+| project email_addr;
+Email
+| where recipient in (arch_emails)
+| where sender contains "alex_johnson@framtidxdevcorp.com"
+Answer: Important: Architectural Plan Changes
+
+Which domain is the page hosted on?
+Answer: greenprojectnews.net
+
+What type of phishing attack is this?
+Answer: spear phishing
+
+How many distinct pages on the company’s website did the threat actor browse to?
+let bad_ips=
+PassiveDns
+| where domain contains "greenprojectnews.net"
+| project ip;
+InboundNetworkEvents
+| where src_ip in (bad_ips)
+| distinct url
+Answer: 78
+
+Which job related referrer returned the most results?
+let bad_ips=
+PassiveDns
+| where domain contains "greenprojectnews.net"
+| project ip;
+InboundNetworkEvents
+| where src_ip in (bad_ips)
+| summarize count() by referrer
+Answer: https://www.valdorianjobs.com
+
+Did any of them try to log in to that actor controlled page? If only one of them did, answer with their name, if both did, type both.
+let ips=
+Employees
+| where role == "Chief Architect"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (ips)
+| where url contains "greenprojectnews.net"
+Answer: both
+
+What time did they manage to log in to Sofia’s machine?
+let ips=
+PassiveDns
+| where domain contains "greenprojectnews.net"
+| project ip;
+let sophia_host=
+Employees
+| where role == "Chief Architect" and name == "Sofia Lindgren"
+| project hostname;
+let sophia_username=
+Employees
+| where role == "Chief Architect" and name == "Sofia Lindgren"
+| project username;
+AuthenticationEvents
+| where username in (sophia_username)
+| where hostname in (sophia_host)
+| where src_ip in (ips)
+Answer: 2024-06-27T10:41:38.000Z
+
+What is the first Powershell cmdlet used to delete something from Erik and Sofia’s machines?
+let sophia_host=
+Employees
+| where role == "Chief Architect" and name == "Sofia Lindgren"
+| project hostname;
+ProcessEvents
+| where hostname in (sophia_host)
+| where timestamp >= datetime(2024-06-27T10:41:38.000Z)
+| where process_name == "powershell.exe"
+Answer: Remove-Item
+
+What is the name of the file that was deleted?
+Answer: SuperImportantMallProjectArchitecturalPlans.docx
+
+What is the name of the file they downloaded?
+Answer: fake_plans.docx
+
+Which domain hosted that file?
+Answer: newdevelopmentupdates.org
+
+What Powershell cmdlet did the attackers use to rename the downloaded file?
+Answer: Rename-Item
+
+What was the file renamed to?
+Answer: SuperImportantMallProjectArchitecturalPlans.docx
+
+According to MITRE, what kind of impact is this an example of?
+Answer: data manipulation
+
+
+Section 4: Nope, It's a Full On Fragnado!!!!
+What is Alex Johnson’s role in the company?
+Employees
+| where name == "Alex Johnson"
+| project role
+Answer: Developer
+
+How many internal phishing emails were sent from Alex’s email address?
+let alex_email=
+Employees
+| where name == "Alex Johnson"
+| project email_addr;
+Email
+| where sender in (alex_email)
+| where recipient contains "framtidxdevcorp.com"
+Answer: 7
+
+How many distinct roles were targeted by the spearphishing emails?
+let alex_email=
+Employees
+| where name == "Alex Johnson"
+| project email_addr;
+let recps=
+Email
+| where sender in (alex_email)
+| where recipient contains "framtidxdevcorp.com"
+| where subject has_any ("important", "urgent", "web server")
+| project recipient;
+Employees
+| where email_addr in (recps)
+| distinct role
+Answer: 4
+(One being CEO)
+
+What is the name of the very important person who was targeted?
+Employees
+| where role == "CEO"
+| project name
+Answer: Johanna Karlsson
+
+What was the subject of the mail targeting the person found in Q4?
+let jo_email=
+Employees
+| where role == "CEO"
+| project email_addr;
+Email
+| where recipient in (jo_email)
+| where subject has_any("important","urgent","web server")
+| project subject
+Answer: Urgent: Security Update Required
+
+What are they trying to find out about the person from Q4?
+let bad_ips=
+PassiveDns
+| where domain contains "greenprojectnews.net"
+| project ip;
+InboundNetworkEvents
+| where url contains "CEO" or url contains "Karlsson"
+| where src_ip in (bad_ips)
+Answer: dark secrets
+
+Did Johanna type in her credentials? yes/no.
+let jo_email=
+Employees
+| where role == "CEO"
+| project email_addr;
+let bad_link=
+Email
+| where recipient in (jo_email)
+| where subject has_any("important","urgent","web server")
+| extend domain = parse_url(link).Host
+| project tostring(domain);
+OutboundNetworkEvents
+| extend dmn = parse_url(url).Host
+| where dmn in (bad_link)
+Answer: yes
+
+When did the threat actor log in to Johanna’s machine?
+let jo_user=
+Employees
+| where role == "CEO"
+| project username;
+let jo_host=
+Employees
+| where role == "CEO"
+| project hostname;
+let bad_ip=
+PassiveDns
+| where domain contains "newdevelopmentupdates.org"
+| project ip;
+AuthenticationEvents
+| where src_ip in (bad_ip)
+| where hostname in (jo_host)
+| where username in (jo_user)
+Answer: 2024-06-27T12:40:59.000Z
+
+In which folder did they collect the incriminating files?
+let jo_host=
+Employees
+| where role == "CEO"
+| project hostname;
+ProcessEvents
+| where hostname in (jo_host)
+| where timestamp >= datetime(2024-06-27T12:40:59.000Z)
+| where process_name == "powershell.exe"
+Answer: C:\Users\jokarlsson\Documents\StolenEmails
+
+To continue prepping the files for a potential exfiltration, they archived the content of the folder found in Q9. What command did they use to do this?
+Answer: Compress-Archive -Path C:\Users\jokarlsson\Documents\StolenEmails\* -DestinationPath C:\Users\jokarlsson\Documents\StolenEmails.zip
+
+Johanna seems to have had a few email exchange with a very specific person. What is the email address of that person?
+let jo_email=
+Employees
+| where role == "CEO"
+| project email_addr;
+Email
+| where sender in (jo_email)
+| summarize count() by recipient
+Answer: erik.stevens@valdoriapublicworks.gov
+
+How many emails total can you find between them?
+let jo_email=
+Employees
+| where role == "CEO"
+| project email_addr;
+Email
+| where sender in (jo_email) or recipient in (jo_email)
+| where sender == "erik.stevens@valdoriapublicworks.gov" or recipient == "erik.stevens@valdoriapublicworks.gov"
+Answer: 6
+
+What is the mayor looking forward to?
+Answer: We're going to make so much freaking money!
+
+What is the link Johanna shared with the mayor in her last email?
+Answer: https://www.whyyoushoudntcareaboutnature.com
+
+You go back to the processes and find a command that divides the zip file into chunks. When did this happen?
+let jo_host=
+Employees
+| where role == "CEO"
+| project hostname;
+ProcessEvents
+| where hostname in (jo_host)
+| where timestamp >= datetime(2024-06-27T12:40:59.000Z)
+| where process_name == "powershell.exe"
+| where process_commandline contains "zip"
+Answer: 2024-07-08T14:41:47.000Z
+
+How many chunks were the archive divided into?
+Answer: 10
+
+The hacktivists sent the chunks to an email address they control. What is that email address?
+Email
+| where link contains "chunk" or subject contains "chunk"
+Answer: htuortwodahs@yopmail.com
+
+Who is the other recipient?
+Email
+| where sender == "ceo@framtidxdevcorp.com"
+| where recipient != "htuortwodahs@yopmail.com"
+Answer: nene.leaks@valdoriantimes.com
+
+What is the subject of the emails sent to the editor?
+Answer: Confidential Documents: Scandalous Emails Exposed on Mall Project!!!!!
