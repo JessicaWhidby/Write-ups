@@ -1,0 +1,676 @@
+SUMMARY
+Explicitly an APT hunt scenario. Hunters must apply threat intelligence to guide their search, identify APT TTPs in log data, and trace a full campaign — directly matching the 'intel-led hunting' approach used in mature hunt programmes.
+
+LEARNING OBJECTIVES
+- Start investigations from security alerts on quarantined files"
+- Identify phishing emails impersonating trusted partners using reply-to manipulation
+- Decode base64-encoded PowerShell commands to understand attacker actions
+- Trace malware from initial file creation through process execution to C2 communication
+- Recognize watering hole attacks through outbound browsing patterns"
+- Identify credential theft tools and lateral movement"
+- Analyze authentication logs for external attacker logins"
+- Map attacker infrastructure using PassiveDNS pivoting"
+- Attribute attacks to known APT groups using public threat intelligence"
+- Identify data exfiltration using rclone and mailbox export"
+
+SOURCE
+https://kc7cyber.com/challenges/38
+
+STEPS TAKEN
+Section 1: KQL 101
+How many employees are in the company?
+Employees
+| count 
+Answer: 923
+
+Each employee at HopsNStuff is assigned an IP address. Which employee has the IP address: 192.168.2.191?
+Employees
+| where ip_addr == "192.168.2.191" 
+Answer: John Clark
+
+How many emails did Simeon Kakpovi receive?
+let simeon_email=
+Employees
+| where name == "Simeon Kakpovi"
+| project email_addr;
+Email
+| where recipient in (simeon_email)
+| count
+Answer: 32
+
+How many distinct senders were seen in the email logs from easterdelights.org?
+Email
+| where sender contains "easterdelights.org"
+| distinct sender
+Answer: 1670
+
+How many unique URLs did “Arthur Raymond” visit?
+let arthur_ip=
+Employees
+| where name == "Arthur Raymond"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (arthur_ip)
+| distinct url
+Answer: 72
+
+How many domains in the PassiveDNS records contain the word “automation”? (hint: use the contains operator instead of has. If you get stuck, do a take 10 on the table to see what fields are available.)
+PassiveDns
+| where domain contains "automation"
+| distinct domain
+Answer: 34
+
+What IP addresses did the domain automationpackages.com resolve to (if there are more than one, enter any one of them)?
+PassiveDns
+| where domain contains "automationpackages.com"
+| distinct ip
+Answer: 190.78.143.29
+
+How many unique URLs were browsed by employees named “Karen”?
+let karen_ips=
+Employees
+| where name contains "Karen"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (karen_ips)
+| distinct url
+Answer: 154
+
+
+Section 2: Info
+Let's take a look at our SecurityAlerts. A security alert flagged on a file that was quarantined on March 31, 2023. Which host was this identified on?
+SecurityAlerts
+| where timestamp between (datetime(3-31-2023 12:00:00AM).. datetime(4-1-2023 12:00:00AM))
+Answer: QBYQ-DESKTOP
+
+Which employee uses this device? (the one found in Question 2)
+Employees
+| where hostname == "QBYQ-DESKTOP"
+| project name
+Answer: Barbara Rochford
+
+How many unique hosts had this file on their system? (the file seen in the alert from question 1)
+FileCreationEvents
+| where filename == "Dev-Requirements.zip"
+| distinct hostname
+Answer: 9
+
+When was the earliest time this file was seen? (the file seen in the alert from question 1) Make sure to paste the exact timestamp from ADX
+Answer: 2023-03-23T09:52:06.000Z
+
+Investigate the earliest device that had this file. (the file seen in the alert from question 1) What's the role of the employee who uses this host machine?
+let inf_host=
+FileCreationEvents
+| where filename == "Dev-Requirements.zip"
+| where timestamp == "2023-03-23T09:52:06.000Z"
+| project hostname;
+Employees
+| where hostname in (inf_host)
+| project role
+Answer: Logistics Coordinator
+
+How many external emails did this employee (the one from question 5) receive based on the data you have?
+let inf_host=
+FileCreationEvents
+| where filename == "Dev-Requirements.zip"
+| where timestamp == "2023-03-23T09:52:06.000Z"
+| project hostname;
+let inf_email=
+Employees
+| where hostname in (inf_host)
+| project email_addr;
+Email
+| where recipient in (inf_email)
+| where sender !contains "hopsnstuff.com"
+Answer: 21
+
+How many external emails were sent to the employees from the unique host machines identified in Question 3?
+let inf_host=
+FileCreationEvents
+| where filename == "Dev-Requirements.zip"
+| project hostname;
+let inf_email=
+Employees
+| where hostname in (inf_host)
+| project email_addr;
+Email
+| where recipient in (inf_email)
+| where sender !contains "hopsnstuff.com"
+Answer: 219
+
+From the emails you've found in Question 7, what is the email address of the sender that sent the most recent email that was BLOCKED?
+let inf_host=
+FileCreationEvents
+| where filename == "Dev-Requirements.zip"
+| project hostname;
+let inf_email=
+Employees
+| where hostname in (inf_host)
+| project email_addr;
+Email
+| where recipient in (inf_email)
+| where sender !contains "hopsnstuff.com"
+| sort by timestamp desc
+Answer: dorothy_christopher@yandex.com
+
+What country is the email provider from the sender (8) headquartered in?
+Answer: Russia
+
+Let's investigate the file name that was flagged in Question 1. Look for this file in the emails you filtered for on Question 7. One of the emails marked SUSPICIOUS looks like it came from a partner company. What was the sender's email address?
+Answer: catherine_phillips@ingredientswarehouse.com
+
+When was the email from question 10 sent?
+Answer: 2023-03-24T04:28:56.000Z
+
+What is the email in the reply_to field in the email from question 10?
+Answer: development_software@hotmail.com
+
+To what IP address does the domain in the link field resolve to? Pick the IP address closest (in time) to when the email was sent to the employee in Question 11.
+PassiveDns
+| where domain == "development-module.com"
+| where timestamp <= datetime(2023-03-24T04:28:56.000Z)
+Answer: 221.2.0.193
+
+At what time did the employee click on the link? (from the email in 10) Make sure to copy the exact timestamp
+let john_ip=
+Employees
+| where email_addr == "john_clark@hopsnstuff.com"
+| project ip_addr;
+OutboundNetworkEvents
+| where url contains "Dev-Requirements.zip"
+| where src_ip in (john_ip)
+Answer: 2023-03-24T10:07:34.000Z
+
+How many unique domains hosting the same file were clicked by employees?
+OutboundNetworkEvents
+| where url contains "Dev-Requirements.zip"
+| extend domain = tostring(parse_url(url).Host)
+| distinct domain
+Answer: 5
+
+Let's look at the emails from Question 10. Some of the emails mention a programming language. What is it?
+Email
+| where sender == "catherine_phillips@ingredientswarehouse.com"
+Answer: Python
+
+Let's look for any references to the answer from Question 16 in running processes. What's the full command line that references the programming language?
+ProcessEvents
+| where process_commandline contains "python"
+Answer: powershell.exe Get-Command python
+
+How many unique hosts had this command line from the previous question?
+ProcessEvents
+| where process_commandline contains "python"
+| distinct hostname
+Answer: 18
+
+Two of the Parent Process Names do not appear to be legitimate Windows executables. How many records in total have these Parent Process Names?
+ProcessEvents
+| where parent_process_name == "nettor.dll" or parent_process_name == "rabbitmq.exe"
+Answer: 42
+
+How many distinct hosts had these processes run on their systems?
+ProcessEvents
+| where parent_process_name == "nettor.dll" or parent_process_name == "rabbitmq.exe"
+| distinct hostname
+Answer: 21
+
+When was the earliest time these processes were seen?
+Answer: 2023-03-10T11:09:58.000Z
+
+Look for where the file was first seen on a host. Where was this file located? Copy and paste the full path.
+FileCreationEvents
+| where filename == "rabbitmq.exe"
+Answer: C:\ProgramData\rabbitmq.exe
+
+What is the SHA256 hash of this file?
+Answer: 30bb094cc616fb4715cef4398a24b76570031ae23f86c4da4f8fd7e5c03ddfc5
+
+Search this hash on virustotal.com. What is the md5 hash for this file?
+Answer: 76d965def5c93a8fda85cff949edf7c6
+
+Let's look for the file in other places. What was the path for the file observed on March 13, 2023?
+FileCreationEvents
+| where filename == "rabbitmq.exe"
+| where timestamp between (datetime(3-13-2023 12:00:00AM).. datetime(3-14-2023 12:00:00AM))
+Answer: C:\Users\Public\rabbitmq.exe
+
+Now let's look at that path across all of the devices. We've already seen some files here from our previous investigation. Which file haven't we seen before?
+FileCreationEvents
+| where path contains "C:\\Users\\Public"
+| distinct filename
+Answer: go.dll
+
+Now that we have 3 file names, let's go back to our process events and find all parent processes that use these files. How many total records are there?
+let files=
+FileCreationEvents
+| where path contains "C:\\Users\\Public"
+| project filename;
+ProcessEvents
+| where parent_process_name in (files)
+Answer: 56
+
+These executables seem to run powershell.exe on the command line and has some garbled text after it. After figuring out how to ungarble it, investigate what it's doing. A file is referenced at the end. What is it?
+Answer: rotten.egg
+
+This threat actor left the answer to a question among those processes. What's the answer?
+Answer: The comedy-hens!
+
+How many unique IP addresses did this attacker use to communicate with the infected hosts?
+Answer: 15
+
+On what date did this actor send their earliest email? YYYY-MM-DD
+let dmns=
+PassiveDns
+| where ip has_any ("136.8.188.128","203.49.253.229","119.163.38.443","196.108.248.138","206.32.96.173","131.15.28.92","206.103.24.100","200.64.106.15","81.26.240.75","215.236.67.20","74.4.234.149","221.2.0.193","204.74.144.212","210.65.174.202","210.192.86.27")
+| distinct domain;
+Email
+| extend domain = tostring(parse_url(link).Host)
+| extend domain2 = tostring(split(sender, '@')[-1])
+| where domain in (dmns) or domain2 in (dmns)
+Answer: 2023-03-10
+
+On what date did this actor send their most recent email? YYYY-MM-DD
+let bad_sender=
+Email
+| where link has_any ("Dev-Requirements.zip", "nettor.dll","rabbitmq.exe","go.dll")
+| distinct sender;
+Email
+| where sender in (bad_sender)
+Answer: 2023-04-01
+
+What was the earliest time of day that this actor sent an email? (answer is the hour, e.g. 5 or 5am)
+Answer: 3
+
+What was the latest time of day that this actor sent an email?
+Answer: 9
+
+
+Section 3: Golden
+A law enforcement agency informed HopsNStuff that an adversary was attempting to gain access to their company. They said the actor may have sent a PDF file called Ginger_beer_secret_recipe.pdf in February of 2023. What hostname had this file first?
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+Answer: KBBH-MACHINE
+
+When was this file created on the host machine?
+Answer: 2023-02-08T17:32:47.000Z
+
+How many host machines total have a file with this observed filename (Ginger_beer_secret_recipe.pdf) ?
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname
+Answer: 9
+
+What is the role of the employees of those host machines?
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+Employees
+| where hostname in (inf_hosts)
+| distinct role
+Answer: Secret Formular Guardian
+
+Based on where the files are located on the hosts, how many files in total are found within that same path? (Hint: count the total number of files across all the observed filepaths)
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+FileCreationEvents
+| where path contains "C:\\Users\\"
+| where path contains "Downloads"
+| where hostname in (inf_hosts)
+Answer: 239
+
+How many of those files are PDFs?
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+FileCreationEvents
+| where path contains "C:\\Users\\"
+| where path contains "Downloads"
+| where filename contains ".pdf"
+| where hostname in (inf_hosts)
+Answer: 49
+
+How many distinct PDF filenames are there from the previous question?
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+FileCreationEvents
+| where path contains "C:\\Users\\"
+| where path contains "Downloads"
+| where filename contains ".pdf"
+| where hostname in (inf_hosts)
+| distinct filename
+Answer: 4
+
+Did any of the other files hit on security alerts? Answer "None" if there weren't any, or submit any of the other filenames that did.
+SecurityAlerts
+| where description has_any ("Ginger_beer_secret_recipe.pdf","mention.pdf","appear.pdf","Brewery_layout.pdf")
+Answer: Brewery_layout.pdf
+
+Were there any additional host machines identified from the answer from the previous question? Answer "None" if there weren't any, or submit any of the other hostnames you identified.
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+let bad_host=
+FileCreationEvents
+| where filename == "Brewery_layout.pdf"
+| project hostname;
+FileCreationEvents
+| where hostname in (bad_host) and hostname !in (inf_hosts)
+| distinct hostname
+Answer: NSM0-MACHINE
+
+Let's investigate where the two suspicious pdf files came from. How many emails had a reference to the file(s)?
+Email
+| where link contains "Ginger_beer_secret_recipe.pdf" or link contains "Brewery_layout.pdf"
+Answer: 0
+
+How many Outbbound connections referenced the file(s)?  
+OutboundNetworkEvents
+| where url contains "Ginger_beer_secret_recipe.pdf" or url contains "Brewery_layout.pdf"
+Answer: 50
+
+How many distinct domains were observed in links containing these filenames?
+OutboundNetworkEvents
+| where url contains "Ginger_beer_secret_recipe.pdf" or url contains "Brewery_layout.pdf"
+| extend domain = tostring(parse_url(url).Host)
+| distinct domain
+Answer: 19
+
+How many unique file(s) are referenced from the identified domains?
+let dmns=
+OutboundNetworkEvents
+| where url contains "Ginger_beer_secret_recipe.pdf" or url contains "Brewery_layout.pdf"
+| extend domain = tostring(parse_url(url).Host)
+| distinct domain;
+OutboundNetworkEvents
+| extend domain = parse_url(url).Host
+| where domain in (dmns)
+| extend file = tostring(parse_url(url).Path)
+| extend filename = tostring(parse_path(file).Filename)
+| distinct filename
+Answer: 7
+
+Based on your investigation, HopsNStuff may have been a victim of what type of initial attack?
+Answer: watering hole
+
+Let's investigate this activity further. What's the parent_process_hash of the tool that was used to steal user credentials?
+ProcessEvents
+| where process_commandline contains "password"
+Answer: 614ca7b627533e22aa3e5c3594605dc6fe6f000b0cc2b845ece47ca60673ec7f
+
+Investigate the running processes. There are suspicious processes conducting reconnaissance. How many unique directory paths are these suspicious processes located in on infected host machines? (Find the recon command, and go identify its process parent file on disk)
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+let processes=
+ProcessEvents
+| where hostname in (inf_hosts)
+| where process_commandline contains "whoami"
+| distinct parent_process_name;
+FileCreationEvents
+| where filename in (processes)
+| where hostname in (inf_hosts)
+| distinct path
+Answer: 2
+
+How many distinct filenames are located in these directory paths?
+Answer: 3
+
+Let's look at the authentication logs for users related to the suspected infected hosts. How many distinct external IP addresses were observed logging into the users of those hosts?
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+let inf_emp=
+Employees
+| where hostname in (inf_hosts)
+| project username;
+AuthenticationEvents
+| where username in (inf_emp)
+| distinct src_ip
+Answer: 10
+
+Which IP address appears to be located in South America? Hint: Check AbuseIPDB or MaxMind GeoIP2 Database
+Answer: 189.82.187.235
+
+How many IP addresses appear to be located in Asia?
+Answer: 2
+
+What file may have been used to exfiltrate data?
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+ProcessEvents
+| where hostname in (inf_hosts)
+| where process_commandline contains "copy"
+Answer: rclone.exe
+
+How many unique domains were used for exfiltration? Answer 0 if you did not find any.
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+ProcessEvents
+| where hostname in (inf_hosts)
+| where process_commandline contains "rclone.exe"
+| distinct process_commandline
+Answer: 22
+
+Let's look at the most recent exfiltration activity and the domain used in Questions 21-22. What IP address does this domain resolve to? (Hint: choose the IP address closest to when the date of activity occured)
+PassiveDns
+| where domain == "moneybags.biz"
+Answer: 184.48.44.45
+
+Law enforcement agents say the threat actor may have searched for "egg" on the HopsNStuff's website. How many distinct IP addresses do this?
+InboundNetworkEvents
+| where url contains "egg%20" and url contains "query"
+| distinct src_ip
+Answer: 10
+
+Law enforcement agents also tell you that the threat actor may have used a batch file but REFUSE to elaborate any further. They tell you it's classified. What command might they be referring to?
+let inf_hosts=
+FileCreationEvents
+| where filename contains "Ginger_beer_secret_recipe.pdf"
+| distinct hostname;
+ProcessEvents
+| where hostname in (inf_hosts)
+| where process_commandline contains ".bat"
+Answer: cmd.exe /c a.bat > C:\wmi.dll 2>&1
+
+A very specific APT defined by Mandiant has used the exact same cmd.exe command used by this attacker and the same credential stealer for lateral movement. Which APT group is this?
+Answer: APT41
+
+What is the name of one of non-Linux backdoors used by the APT group from question 25?
+Answer: HIGHNOON
+
+How many DNS records have domains with the word "moneybags"?
+PassiveDns
+| where domain contains "moneybags"
+Answer: 31
+
+On February 8, 2023, Robert Boyce's machine had a file created with a single letter for its name. Search the hash of this file on VirusTotal. When was it first submitted?
+let robert_machine=
+Employees
+| where name == "Robert Boyce"
+| project hostname;
+FileCreationEvents
+| where hostname in (robert_machine)
+| where timestamp between (datetime(02-08-2023 12:00:00AM) .. datetime(02-09-2023 12:00:00AM))
+a.exe - hash of f96bf53ddd24df5e346a60695f801c3dd682fa38c40b8fd2ecd2db5bde29783e
+Answer: 2022-10-02 03:35:57 UTC
+
+Employee Cindy Lozano reported some strange activity with her email account. A weird file was seen in her Sent folder but she deleted it right away without looking at the name. What was the name of this file?
+InboundNetworkEvents
+| where url contains "cilozano"
+Answer: messages.rar
+
+Do you think this activity is linked to Section 2? Yes/No
+Answer: yes
+
+On what date did this actor send their earliest email? YYYY-MM-DD
+let bad_ips=
+InboundNetworkEvents
+| where url contains "login_user" or url contains "mailbox_folder"
+| distinct src_ip;
+let dmns=
+PassiveDns
+| where ip in (bad_ips)
+| project domain;
+Email
+| extend domain = tostring(parse_url(link).Host)
+| where domain in (dmns)
+Answer: 2023-02-08
+
+On what date did this actor send their most recent email? YYYY-MM-DD
+Answer: 2023-03-30
+
+What was the earliest time of day that this actor sent an email? (#AM/PM)
+Answer: 8
+
+What was the latest time of day that this actor sent an email? (#AM/PM)
+Answer: 6PM
+
+
+Section 4: Sugar Rush
+IP 158.235.158.156 was observed exfiltrating data from mailboxes at HopsNStuff. How many mailboxes were affected?
+InboundNetworkEvents
+| where src_ip == "158.235.158.156"
+Answer: 2
+
+How many total accounts did IP 158.235.158.156 successfully login into?
+Answer: 2
+
+Whose account was first accessed by IP 158.235.158.156?
+Answer: lebedford
+
+What was the subject of the email that the user in (3) received leading to their account being compromised?
+let dmns=
+PassiveDns
+| where ip == "158.235.158.156"
+| project domain;
+let phished_email=
+Employees
+| where username == "lebedford"
+| project email_addr;
+Email
+| where timestamp <= datetime(2023-03-02T11:39:20.000Z)
+| where recipient in (phished_email)
+| sort by timestamp desc
+Answer: [EXTERNAL] Exclusive Invitation to our Candy Themed Beer Festival
+
+How many actor email addresses were observed associated with the subject in (4)?
+Email
+| where subject == "[EXTERNAL] Exclusive Invitation to our Candy Themed Beer Festival"
+| project sender, reply_to
+Answer: 4
+
+How many actor domains were observed associated with the subject in (5)?
+Answer: 4
+
+How many IP addresses were associated via PassiveDNS with the domains in (6)?
+let dmns=
+Email
+| where subject == "[EXTERNAL] Exclusive Invitation to our Candy Themed Beer Festival"
+| extend domain = tostring(parse_url(link).Host)
+| project domain;
+PassiveDns
+| where domain in (dmns)
+| distinct ip
+Answer: 5
+
+How many top level domains (TLDs) are used by this actor (based on your observations so far)?
+Answer: 3
+
+How many domains are associated with this actor? Look for patterns and build a query based on their infrastructure registration TTPs (Hint: between 75 and 300)
+Email
+| where subject == "[EXTERNAL] Exclusive Invitation to our Candy Themed Beer Festival"
+| project sender, reply_to
+Senders/reply-tos: beer.beer@yahoo.com, tasting_beer@yahoo.com, craftbeer@yahoo.com, candyfestivals@yahoo.com
+let dmns=
+Email
+| where sender has_any ("beer.beer@yahoo.com", "tasting_beer@yahoo.com", "craftbeer@yahoo.com", "candyfestivals@yahoo.com") or reply_to has_any ("beer.beer@yahoo.com", "tasting_beer@yahoo.com", "craftbeer@yahoo.com", "candyfestivals@yahoo.com")
+| extend domain = tostring(parse_url(link).Host)
+| distinct domain;
+PassiveDns
+| where domain matches regex "(beer|candy|ginger|hops|sweet|malt|craft|-){3}"
+| distinct domain
+
+How many emails did this actor send?
+let dmns=
+PassiveDns
+| where domain matches regex "(beer|candy|ginger|hops|sweet|malt|craft|-){3}"
+| distinct domain;
+Email
+| extend domain = tostring(parse_url(link).Host)
+| where domain in (dmns)
+Answer: 93
+
+How many of this actor's emails were actually delivered (not blocked)?
+let dmns=
+PassiveDns
+| where domain matches regex "(beer|candy|ginger|hops|sweet|malt|craft|-){3}"
+| distinct domain;
+Email
+| extend domain = tostring(parse_url(link).Host)
+| where domain in (dmns)
+| where verdict != "BLOCKED"
+Answer: 88
+
+How many HopsNStuff employees clicked on more than 1 link from this actor?
+let dmns=
+PassiveDns
+| where domain matches regex "(beer|candy|ginger|hops|sweet|malt|craft|-){3}"
+| distinct domain;
+let bad_links=
+Email
+| extend domain = tostring(parse_url(link).Host)
+| where domain in (dmns)
+| where verdict != "BLOCKED"
+| distinct link;
+OutboundNetworkEvents
+| where url has_any (bad_links)
+| summarize clickedon = dcount(url) by src_ip
+| where clickedon >= 2
+| distinct src_ip
+Answer: 6
+
+How many accounts at HopsNStuff did this actor attempt to log into?
+let dmns=
+PassiveDns
+| where domain matches regex "(beer|candy|ginger|hops|sweet|malt|craft|-){3}"
+| distinct domain;
+let ips=
+PassiveDns
+| where domain in (dmns)
+| distinct ip;
+AuthenticationEvents
+| where src_ip in (ips)
+Answer: 74
+
+How many mail accounts did this actor exfiltrate data from? (Hint: Look for clear evidence of this.)
+let dmns=
+PassiveDns
+| where domain matches regex "(beer|candy|ginger|hops|sweet|malt|craft|-){3}"
+| distinct domain;
+let ips=
+PassiveDns
+| where domain in (dmns)
+| distinct ip;
+let comp_users=
+AuthenticationEvents
+| where src_ip in (ips)
+| where result contains "Success"
+| distinct username;
+InboundNetworkEvents
+| where url has_any (comp_users)
+| where src_ip in (ips)
+Answer: 36
