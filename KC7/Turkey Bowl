@@ -1,0 +1,341 @@
+SUMMARY
+Hunt-focused Moderate scenario. Builds hunting cadence and query discipline — hunters must iterate through hypotheses methodically, a habit that distinguishes systematic hunters from those who 'get lucky'.
+
+LEARNING OBJECTIVES
+- How to identify elements of exfiltration
+- How to interpret Process Events to identify evidence of malicious activity
+- How to navigate command line arguments
+
+SOURCE
+https://kc7cyber.com/challenges/381
+
+STEPS TAKEN
+Section 1: KQL 101
+Run a take 10 on the Employees table. Which column contains an authentication boolean?
+Answer: mfa_enabled
+
+How many employees (staff members and students) make up Oxford Academy?
+Employees
+| count
+Answer: 777
+
+Which employee has the role of “Lead Coach”? (provide the name)
+Employees
+| where role == "Lead Coach"
+| project name
+Answer: Dill Delichick
+
+How many emails has Dill Delichick received?
+let dill_email=
+Employees
+| where role == "Lead Coach"
+| project email_addr;
+Email
+| where recipient in (dill_email)
+Answer: 15
+
+How many Oxford employees received emails with the term "turkey" in the subject?
+Email
+| where recipient contains "go-oxford-owls"
+| where subject contains "turkey"
+| distinct recipient
+Answer: 553
+
+How many unique websites did Patrick Stump visit?
+let patrick_ip=
+Employees
+| where name == "Patrick Stump"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (patrick_ip)
+| distinct url
+Answer: 34
+
+How many distinct domains in the PassiveDns records contain the word "owls"?
+PassiveDns
+| where domain contains "owls"
+| distinct domain
+Answer: 5
+
+How many distinct URLs were browsed by employees with the first name Mary?
+let mary_ips=
+Employees
+| where name contains "Mary"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (mary_ips)
+| distinct url
+Answer: 368
+
+
+Section 2: This Is Gonna Be A Hoot
+What is Tac Zaylor's email address?
+Employees
+| where name == "Tac Zaylor"
+| project email_addr
+Answer: tac_zaylor@go-oxford-owls.edu
+
+What is Tac Zaylor's IP address?
+Employees
+| where name == "Tac Zaylor"
+| project ip_addr
+Answer: 10.10.0.13
+
+How many email were sent to Tac Zaylor from a go-oxford-owls.edu email?
+let tac_email=
+Employees
+| where name == "Tac Zaylor"
+| project email_addr;
+Email
+| where recipient in (tac_email)
+| where sender contains "go-oxford-owls.edu"
+Answer: 10
+
+How many of these emails came from those with a student role?
+let tac_email=
+Employees
+| where name == "Tac Zaylor"
+| project email_addr;
+let all_senders=
+Email
+| where recipient in (tac_email)
+| where sender contains "go-oxford-owls.edu"
+| project sender;
+Employees
+| where email_addr  in (all_senders)
+| where role == "Student"
+| distinct email_addr
+Answer: 2
+
+Review the emails from these student accounts for the one sent on November 15, 2024 containing an inquiry for help from the assistant coach. What was the subject line of this email?
+let tac_email=
+Employees
+| where name == "Tac Zaylor"
+| project email_addr;
+let all_senders=
+Email
+| where recipient in (tac_email)
+| where sender contains "go-oxford-owls.edu"
+| project sender;
+let student_senders=
+Employees
+| where email_addr  in (all_senders)
+| where role == "Student"
+| project email_addr;
+Email
+| where sender in (student_senders)
+| where timestamp between (datetime(11-15-2024) .. datetime(11-16-2024)) 
+| project subject
+Answer: Urgent Help Required: Coach, I need help accessing the playbook
+
+Who sent this email?
+Answer: brover_pham@go-oxford-owls.edu
+
+What is the device hostname used by this student?
+Employees
+| where email_addr == "brover_pham@go-oxford-owls.edu"
+| project hostname
+Answer: S1VX-MACHINE
+
+What is the name of the file downloaded from the email?
+let tac_email=
+Employees
+| where name == "Tac Zaylor"
+| project email_addr;
+let all_senders=
+Email
+| where recipient in (tac_email)
+| where sender contains "go-oxford-owls.edu"
+| project sender;
+let student_senders=
+Employees
+| where email_addr  in (all_senders)
+| where role == "Student"
+| project email_addr;
+Email
+| where sender in (student_senders)
+| where timestamp between (datetime(11-15-2024) .. datetime(11-16-2024)) 
+| where subject == "[EXTERNAL] Urgent Help Required: Coach, I need help accessing the playbook"
+| project links
+Answer: Help_with_Playbook-Heres_What_I_tried.pdf'
+
+Who is the other recipient? Enter their email address
+Answer: dill_delichick@go-oxford-owls.edu
+
+Did the user found in Question 9 also download the file? yes/no
+let dill_ip=
+Employees
+| where email_addr == "dill_delichick@go-oxford-owls.edu"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (dill_ip)
+| where url contains "Help_with_Playbook"
+Answer: no
+
+When did Coach Zaylor download the aforementioned file from Question 7?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+FileCreationEvents
+| where hostname in (tac_host)
+| where filename contains "Help_with_Playbook"
+Answer: 2024-11-15T14:04:36.000Z
+
+Shortly after Coach Zaylor downloaded the file, malicious content began executing. What is the name of the file created?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+FileCreationEvents
+| where hostname in (tac_host)
+| where timestamp >= datetime(2024-11-15T14:04:36.000Z)
+Answer: disaintcobaltstrike.exe
+
+What is the SHA256 of the file from question 9?
+Answer: cdb82be1b9dd6391ed068124cfdf2339d71dd70f6f76462a7e4a0fdadd5a208a
+
+What is the real name for this type of application that is widely used as a penetration testing tool?
+Answer: Cobalt Strike
+
+What is the IP being used for the C2 server?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+ProcessEvents
+| where hostname in (tac_host)
+| where timestamp >= datetime(2024-11-15T14:05:18.000Z)
+Answer: 66.159.94.55:56789
+
+How many unique domains appear in PassiveDns using this IP address?
+PassiveDns
+| where ip == "66.159.94.55"
+| distinct domain
+Answer: 4
+
+List any of the domains that appeared in Question 13.
+Answer: oxfordacademy-bestatfootball.com
+
+What is the term used for this type of attack being used by the attacker?
+Answer: domain spoofing
+
+How many inbound network events occured with the IP address mentioned in Question 12?
+InboundNetworkEvents
+| where src_ip == "66.159.94.55"
+Answer: 44
+
+What is the referrer used by the IP address seen in Question 12 using an .edu TLD (top-level domain) not from Oxford Academy?
+Answer: https://intranet.sierravistahigh.edu
+
+What is the URL of the referrer that is not using the .edu TLD?
+Answer: https://recon.grandtheftautumn.com
+
+Which step of the Cyber Kill Chain does this fall under?
+Answer: reconnaissance
+
+
+Section 3: Half-time
+What command did the attackers use first to perform their initial recon after gaining access to the Oxford network using Coach Tac Zaylor's credentials?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+ProcessEvents
+| where hostname in (tac_host)
+| where timestamp >= datetime(2024-11-15T14:05:18.000Z)
+Answer: whoami
+
+Which netstat flag did the attackers use?
+Answer: ano
+
+What other file was downloaded besides the .pdf file?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+FileCreationEvents
+| where hostname in (tac_host)
+| where timestamp >= datetime(2024-11-15T14:04:36.000Z)
+| where path contains "Downloads"
+Answer: Advanced_IP_Scanner_2.5.3850.exe
+
+What URL did the attacker use to download that second file?
+let tac_ip=
+Employees
+| where name == "Tac Zaylor"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (tac_ip)
+| where timestamp >= datetime(2024-11-15T14:04:36.000Z)
+| where url contains "Advanced_IP_Scanner"
+Answer: https://0xfordacademyf00tball.org/tools/Advanced_IP_Scanner_2.5.3850.exe
+
+What is the name of the output file created?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+ProcessEvents
+| where hostname in (tac_host)
+| where timestamp >= datetime(2024-11-15T14:04:36.000Z)
+| where process_commandline contains "Advanced_IP_Scanner"
+Answer: network_scan.txt
+
+What tool did the attacker use to gain access to the cloud platform?
+let tac_host=
+Employees
+| where name == "Tac Zaylor"
+| project hostname;
+ProcessEvents
+| where hostname in (tac_host)
+| where timestamp >= datetime(2024-11-27T15:10:40.000Z)
+Answer: mimikatz
+
+What is the password used to access the cloud platform?
+Answer: 0wlsRdaBest3st
+
+When did the attacker use the password to log into the cloud platform?
+Answer: 2024-11-27T15:30:11.000Z
+
+A command was run to create copies of all files with the .docx, .pdf, and .xlxs extensions! What is the name of the executable that was used perform this action on the files found in the network share?
+Answer: rclone.exe
+
+What was the command used to copy all of the files into one location?
+Answer: rclone.exe copy \\footballshare\playbook C:\Users\tazaylor\Documents\local_copy_of_playbook --include *.docx --include *.pdf --include *.xlsx
+
+What username was used to exfiltrate the local copy of the playbook created by the attacker?
+Answer: GTA-fvreenivfgn
+
+What is their real username after performing a decipher?
+Answer: sierravista
+
+What type of cipher was used?
+Answer: ROT13
+
+What is the password the attacker used within their environment to log into their account?
+Answer: ItsFallYall
+
+What is the MITRE ATT&CK ID of this attack?
+Answer: T1537
+
+It looks like the attacker also downloaded a word file onto Coach Tac Zaylor's host machine. What is the name of the file?
+Answer: fake_plays.docx
+
+What command was used on this file after it was downloaded onto the host machine?
+Answer: ren
+
+What is the name of the file after using the previously mentioned command from Question 18?
+Answer: oxford_owls_winning_playbok.docx
+
+What directory did the attacker place this file in after performing the last action on it?
+Answer: C:\Playbooks\
+
+Oh no! After performing a review, we can see that the archive server was wiped cleaned, deleting all backup files of the playbook! What was the command used to perform this action?
+Answer: del \\archive_server\football_team\playbooks /Q /F
+
+What was the full name of the group that hacked Oxford Academy?
+Answer: Grand Theft Autumn
+
+This adversary was based on a ransomware group that mostly targets schools and uses exfiltration, double extortion, and ransomware related techniques. This group was first seen in the summer of 2021 and continued attacking schools in 2022 to 2023. Who was the APT that this story's adversary was based on?
+Answer: Vice Society
