@@ -1,0 +1,107 @@
+SUMMARY
+Extended hunt engagement requiring sustained, structured analysis. Tests whether hunters can maintain methodological discipline across a long, complex investigation — mirroring real hunt engagements that span multiple sessions.
+
+LEARNING OBJECTIVES
+- Pivot on data using Storm and Synapse, learning how to lift, filter, and pivot.
+- Learn how to label nodes to form an analytical layer.
+- Use multiple data sets to answer targeted questions.
+- Investigate cyber activity in logs, including:
+  - Email
+  - Web traffic
+  - Server logs
+- Use multiple techniques to track the activity of APTs (Advanced Persistent Threats).
+- Use third-party data sets to discover insights about your attackers.
+- Make recommendations on actions a company can take to protect itself.
+
+SOURCE
+https://kc7cyber.com/challenges/109
+
+
+Section 0: Storm 101
+How many ps:contact nodes did Synapse return?
+Answer: 1517
+
+What is the CEO's name?
+ps:contact:title=ceo
+Answer: kateryna dmytriuk
+
+Who was the first person to send Delia Hill an email about “solidarity”? Paste their email address.
+inet:email:message:to=delia_hill@envolvelabs.xyz + :subject~=solidarity
+Answer: julius_allison@envolvelabs.xyz
+
+Lift the email messages (inet:email:message) sent from Yuko Sidney (yuko_sidney@envolvelabs.xyz), but filter out (-) those that include the word “term” in the :subject property value. How many messages are there?
+inet:email:message:from=yuko_sidney@envolvelabs.xyz - :subject~=term
+Answer: 20
+
+How many emails did the CEO receive?
+ps:contact:title=ceo -> inet:email -> inet:email:message:to
+Answer: 140
+
+How many unique URLs were sent in the emails?
+ps:contact:title=ceo -> inet:email -> inet:email:message:to -> inet:email:message:link -> inet:url | uniq
+Answer: 32
+
+How many unique URLs did the CEO visit?
+ps:contact:title=ceo -> it:host -> inet:ipv4 -> inet:http:request -> inet:url | uniq
+Answer: 28
+
+How many DNS A records contain the word "cloudapps"?
+inet:dns:a:fqdn~="cloudapps"
+Answer: 6
+
+How many IP addresses did the domain resolve to?
+inet:dns:a:fqdn~="cloudapps" -> inet:ipv4 | uniq
+Answer: 6
+
+What is the job role of the employee assigned to the host?
+risk:alert:detected="2023/10/27 15:26:47" -(refs)> it:host -> ps:contact
+Answer: Sales Representative
+
+Who sent the email that mentions “german”, prompting an alert?
+risk:alert:desc~="german" -(refs)> inet:email:header -> inet:email:message :from -> inet:email
+Answer: jo.smith@aol.com
+
+
+Section 1: It Ain't Snow Joke
+How many email messages contain a link to "energysolutions[.]com"?
+inet:fqdn="energysolutions[.]com" -> inet:url -> inet:email:message:link -> inet:email:message
+Answer: 6
+
+What email address sent the messages?
+Answer: alert@justiceua.org
+
+How many unique subject lines were used in these emails?
+Answer: 1
+
+What was the subject line of these messages?
+Answer: [EXTERNAL] FW: Reporting on the conflict in Ukraine
+
+How many different verdicts were issued for these email messages?
+Answer: 1
+
+What was the verdict issued for these messages?
+Answer: suspicious
+
+How many times did EnvolveLabs employees click on the links in these emails?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
