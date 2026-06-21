@@ -1,0 +1,272 @@
+SUMMARY
+Complex APT intrusion with lateral movement, C2, and exfiltration that automated tools did not catch. Hunters must surface this activity proactively — a direct test of the 'assume breach' hunting philosophy.
+
+SOURCE
+https://kc7cyber.com/challenges/26
+
+STEPS TAKEN
+Section 1: KQL 101
+Do a take 10 on the Employees table. Which column contains email data?
+Employees
+| take 10
+Answer: email_addr
+
+How many employees are in the company?
+Employees
+| count
+Answer: 729
+
+Which employee has the IP address: “192.168.2.191”? (provide the name)
+Employees
+| where ip_addr == "192.168.2.191"
+Answer: Ronald Walker
+
+How many emails did Ronald Walker receive?
+let ronald_email=
+Employees
+| where name == "Ronald Walker"
+| project email_addr;
+Email
+| where recipient in (ronald_email)
+| count
+Answer: 15
+
+How many Balloons Over Iowa employees received emails with the term "ufos" in the subject?
+Email
+| where subject has "ufos"
+| where recipient has "iowaballoons.com"
+| distinct recipient
+Answer: 441
+
+How many unique websites did Jorge Hardwick visit?
+let jorge_ip=
+Employees
+| where name == "Jorge Hardwick"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (jorge_ip)
+| distinct url
+| count
+Answer: 11
+
+How many distinct domains in the PassiveDns records contain the word “infiltrate”?
+PassiveDns
+| where domain contains "infiltrate"
+| distinct domain
+| count
+Answer: 7
+
+What IP did the domain cheeseburger-infiltrate.com resolve to on February 8th?
+PassiveDns
+| where domain == "cheeseburger-infiltrate.com"
+Answer: 40.208.15.1
+
+How many distinct URLs were browsed by employees with the first name Karen?
+let karen_ips=
+Employees
+| where name has "Karen"
+| distinct ip_addr;
+OutboundNetworkEvents
+| where src_ip in (karen_ips)
+| distinct url
+Answer: 27
+
+
+Section 2: Aliens
+Which email address sent a message containing the domain invasion.xyz?
+Email
+| where link contains "invasion.xyz"
+| distinct sender
+Answer: tethys@pocketbook.xyz
+
+How many users received email with links to the domain invasion.xyz?
+Email
+| where link contains "invasion.xyz"
+| distinct recipient
+Answer: 2
+
+What was the subject of those emails?
+Answer: Urgent query about Earth's atmospheric composition
+
+What is the email address of the person that did not receive the emails? (where accept was false)
+Answer: mandy_peters@iowaballoons.com
+
+What file (name) was sent as a link in these emails?
+Answer: Flight-Crew-Information.xls
+
+What is the IP of the user who clicked on the link from the email containing the domain invasion.xyz?
+OutboundNetworkEvents
+| where url == "invasion.xyz/online/public/share/public/search/search/Flight-Crew-Information.xls"
+| project src_ip
+Answer: 192.168.0.123
+
+What is the name of the user from question 6?
+let click_user=
+OutboundNetworkEvents
+| where url == "invasion.xyz/online/public/share/public/search/search/Flight-Crew-Information.xls"
+| project src_ip;
+Employees
+| where ip_addr in (click_user)
+| project name
+Answer: Eugene Lawrence
+
+When did the the user in question 6 click on the link? Provide an exact timestamp
+Answer: 2023-02-10T10:42:39.9904710Z
+
+What is the hostname of the user in question 6?
+let click_user=
+OutboundNetworkEvents
+| where url == "invasion.xyz/online/public/share/public/search/search/Flight-Crew-Information.xls"
+| project src_ip;
+Employees
+| where ip_addr in (click_user)
+| project hostname
+Answer: VRDA-MACHINE
+
+Did the user in question 6 download the file from the link? (yes/no)
+let click_user=
+OutboundNetworkEvents
+| where url == "invasion.xyz/online/public/share/public/search/search/Flight-Crew-Information.xls"
+| project src_ip;
+let click_host=
+Employees
+| where ip_addr in (click_user)
+| project hostname;
+FileCreationEvents
+| where hostname in (click_host)
+| where filename == "Flight-Crew-Information.xls"
+Answer: no
+
+How many total emails were sent by the email address in question 1?
+Email
+| where sender == "tethys@pocketbook.xyz"
+Answer: 9
+
+How many unique filenames were sent by the email address in question 1?
+Answer: 4
+
+What domain did the email address in question 1 use to target Richard Clements?
+Answer: antennas-passers.com
+
+When did Richard Clements click on the link sent by the sender in question 1?
+let richard_ip=
+Employees
+| where name == "Richard Clements"
+| project ip_addr;
+OutboundNetworkEvents
+| where url == "http://antennas-passers.com/modules/published/online/files/images/published/Flight-Crew-Information.xls"
+| where src_ip in (richard_ip)
+Answer: 2023-03-04T07:50:39.7612800Z
+
+When did Richard Clements download the file in the link?
+let richard_host=
+Employees
+| where name == "Richard Clements"
+| project hostname;
+FileCreationEvents
+| where hostname in (richard_host)
+| where filename == "Flight-Crew-Information.xls"
+Answer: 2023-03-04T07:50:39.7612800Z
+
+What was the name of the file that Richard Clements downloaded after clicking on the link?
+Answer: Flight-Crew-Information.xls
+
+What file was observed on Richard Clement's machine immediately after he downloaded the file in question 16? Provide the full path.
+let richard_host=
+Employees
+| where name == "Richard Clements"
+| project hostname;
+FileCreationEvents
+| where hostname in (richard_host)
+| where timestamp > datetime(2023-03-04T07:50:39.7612800Z)
+Answer: C:\ProgramData\NotASpy\yeargood.exe
+
+What was the SHA256 hash of the file in question 17?
+Answer: 3666cb55d0c4974bfee855ba43d596fc6d10baff5eb45ac8b6432a7d604cb8e9
+
+What is the reported name of this file on VirusTotal?
+Answer: ISDQKWGM.dll
+
+What is the popular threat label for the file in question 18 on VirusTotal?
+Answer: virus.eicar/test
+
+How many processes were spawned on Richard Clement's machine by the file in question 18?
+let richard_host=
+Employees
+| where name == "Richard Clements"
+| project hostname;
+ProcessEvents
+| where hostname in (richard_host)
+| where timestamp >= datetime(2023-03-04T07:50:58.7612800Z)
+| where parent_process_name contains "yeargood"
+Answer: 2
+
+The file in question 18 established a remote connection from Richard Clement's machine to an external IP over port 443. What was this IP?
+Answer: 118.3.14.33
+
+Shortly after the malware ran, the attackers came back to Richard's machine to enumerate Enterprise Admins. What command did they run?
+Answer: cmd.exe /C net group /domain 'Enterprise Admins'
+
+What command did the attackers run to dump credentials on Richard's machine?
+Answer: mimikatz
+
+The attackers enumerated the contents of a folder on Richard's machine, then dumped its content to a text file. What was the name of that folder?
+Answer: BalloonSecrets
+
+How many machines have similar commands connecting to C2 (command and control) channels as the one observed in question 22?
+ProcessEvents
+| where process_commandline contains ":443" and process_commandline contains "rundll32.exe"
+| distinct hostname
+Answer: 36
+
+How many unique implants were used to establish these C2 connections?
+ProcessEvents
+| where process_commandline contains ":443" and process_commandline contains "rundll32.exe"
+| distinct parent_process_hash
+Answer: 11
+
+One of these C2 connections was observed on hostname 0KYU-DESKTOP. When did this occur?
+ProcessEvents
+| where process_commandline contains ":443" and process_commandline contains "rundll32.exe"
+| where hostname == "0KYU-DESKTOP"
+Answer: 2023-03-04T09:19:33.7612800Z
+
+On hostname 0KYU-DESKTOP, what commands did the attackers run to delete data backups?
+ProcessEvents
+| where hostname == "0KYU-DESKTOP"
+| where timestamp > datetime(2023-03-04T09:19:33.7612800Z)
+Answer: vssadmin.exe Delete Shadows /all /quiet
+
+What kind of attack could this be a sign of?
+Answer: ransomware
+
+
+Section 3: Topsecret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
