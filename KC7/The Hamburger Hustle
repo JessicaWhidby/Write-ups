@@ -1,0 +1,197 @@
+SUMMARY
+Something’s not right. Suspicious traffic has been spotted, and early signs point to something deeper.
+
+LEARNING OBJECTIVES
+-  Use Azure Data Explorer and Kusto Query Language (KQL) to explore security data across Convoy Street Interactive.
+- Gather indicators of compromise (IOCs) from suspicious activity tied to player-facing and internal systems.
+- Enrich findings with threat intelligence to build context around attacker infrastructure and potential attribution.
+- Apply your understanding of adversary behavior to guide and refine the hunt.
+- Investigate attacker movement across systems, including lateral movement and persistence.
+- Practice the hunt/intel feedback loop to piece together the intrusion and uncover what the attacker was really after.
+
+SOURCE
+https://kc7cyber.com/challenges/1100
+
+STEPS TAKEN
+Section 1: Detection to Hypothesis
+Do we have any records of traffic coming from 185.210.94.2? If so, how many?
+InboundNetworkEvents
+| where src_ip == "185.210.94.2"
+Answer: 24
+
+Do we have any records of a user successfully logging in from 185.210.94.2? If so, how many?
+AuthenticationEvents
+| where src_ip == "185.210.94.2"
+Answer: no
+
+What domain does 185.210.94.2 resolve to?
+PassiveDns
+| where ip == "185.210.94.2"
+Answer: telemetryfinancegaming.net
+
+How many distinct IPs are associated with telemetryfinancegaming.net in the PassiveDns table?
+PassiveDns
+| where domain == "telemetryfinancegaming.net"
+Answer: 3
+
+How many additional domains do we identify from this pivot?
+let ips=
+PassiveDns
+| where domain == "telemetryfinancegaming.net"
+| project ip;
+PassiveDns
+| where ip in (ips)
+| distinct domain
+Answer: 4
+
+Which TLD gives us our first big clue about what country the actor behind these IPs might be operating out of?
+Answer: cn
+
+
+Section 2: Context is Everything
+How many employees received emails from those suspicious domains?
+Email
+| where links has_any ("telemetry-finance-gaming.net", "gaming-telemetry-finance.cn", "telemetryfinancegaming.net", "gaming-telemetry-finance.com", "gamingtelemetryfinance.cn")
+Answer: 4
+
+What is the name of the file attached to the email sent to the first employee observed there?
+Answer: GreasyTender_Audit_Report.pdf
+
+How many different filenames are attached to emails from those suspicious domains?
+Answer: 2
+
+In total, how many employees received an email with one of those files attached?
+Email
+| where attachments has_any ("GreasyTender_Audit_Report.pdf", "GT_TelemetrySync.log.pdf")
+| distinct recipient
+Answer: 10
+
+What is the timestamp for the first email sent by this actor?
+Answer: 2024-03-08T16:39:47.000Z
+
+What is the name of the first employee to receive an email from this actor?
+Answer: Peter Orourke
+
+How many distinct roles were targeted?
+let recipients=
+Email
+| where attachments has_any ("GreasyTender_Audit_Report.pdf", "GT_TelemetrySync.log.pdf")
+| distinct recipient;
+Employees
+| where email_addr in (recipients)
+| distinct role
+Answer: 3
+
+How many employees had one of these attachments created on their machine?
+FileCreationEvents
+| where filename has_any ("GreasyTender_Audit_Report.pdf", "GT_TelemetrySync.log.pdf")
+| distinct hostname
+Answer: 10
+
+What is the name of the file that was created immediately after the attachment was opened?
+FileCreationEvents
+| where hostname == "LFUZ-LAPTOP"
+| where timestamp >= datetime(2024-03-09T09:12:47.000Z)
+Answer: output_beacon_monitor.exe
+
+What server does the host attempt to connect to?
+ProcessEvents
+| where hostname == "LFUZ-LAPTOP"
+| where timestamp >= datetime(2024-03-09T09:12:47.000Z)
+Answer: hustlefinance.cn.
+
+How many file types is the attacker attempting to collect from the Greasy Tender directory?
+Answer: 4
+
+What is the name of the file that was created to store stolen Chrome credentials?
+Answer: stolen_chrome_creds.db
+
+What is the timestamp of the last log-clearing command observed on this host?
+Answer: 2024-03-21T21:18:17.000Z
+
+
+Section 3: Access to Impact
+Enter the full command line the attacker used to establish persistence.
+ProcessEvents
+| where hostname == "GUBQ-LAPTOP"
+| where timestamp >= datetime(2024-03-09T09:12:47.000Z)
+Answer:  schtasks /create /tn \"TelemetrySync\" /tr \"powershell.exe -ExecutionPolicy Bypass -File C:\\Windows\\System32\\telemetry_sync.ps1\" /sc onlogon /rl highest
+
+How many machines did the attacker run this command on?
+ProcessEvents
+| where process_commandline contains "schtasks"
+Answer: 3
+
+How many total login events are associated with this set of compromised users?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "schtasks"
+| distinct hostname;
+let comp_users=
+Employees
+| where hostname in (comp_hosts)
+| project username;
+AuthenticationEvents
+| where username in (comp_users)
+Answer: 468
+
+How many successful login events are associated with this set of compromised users?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "schtasks"
+| distinct hostname;
+let comp_users=
+Employees
+| where hostname in (comp_hosts)
+| project username;
+AuthenticationEvents
+| where username in (comp_users)
+| where result contains "Success"
+Answer: 236
+
+How many distinct hostnames were successfully logged into by this set of compromised users?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "schtasks"
+| distinct hostname;
+let comp_users=
+Employees
+| where hostname in (comp_hosts)
+| project username;
+AuthenticationEvents
+| where username in (comp_users)
+| where result contains "Success"
+| distinct hostname
+Answer: 6
+
+Which hostname stands out as the likely target the attackers were most interested in compromising using the stolen credentials?
+Answer: GreasyTenderVault
+
+Which employee’s machine was used by the attacker to move laterally to that system?
+let comp_hosts=
+ProcessEvents
+| where process_commandline contains "schtasks"
+| distinct hostname;
+let comp_users=
+Employees
+| where hostname in (comp_hosts)
+| project username;
+let pivot_user=
+AuthenticationEvents
+| where username in (comp_users)
+| where result contains "Success"
+| where hostname == "GreasyTenderVault"
+| project username;
+Employees
+| where username in (pivot_user)
+| project name
+AnswerL Wes Mantooth
+
+What is the name of the account the attacker used to redirect funds within that system?
+ProcessEvents
+| where hostname == "GreasyTenderVault"
+| where process_commandline contains "pass"
+Answer: hustlecoin_main_blackmarket
+
+What URL were the files exfiltrated to?
+Answer: http://HambulgelerHustle.cn/exfil/
