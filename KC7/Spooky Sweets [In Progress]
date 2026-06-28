@@ -326,11 +326,9 @@ FileCreationEvents
 Answer: controller.exe
 
 Find the initial access vector for this intrusion. What message did it include about 10/31?
-
-
-
-
-
+Email
+| where subject contains "31"
+Answer:  Your facility is closing on October 31.
 
 Which role did the actors primarily target?
 let comp_emails=
@@ -343,6 +341,35 @@ Employees
 Answer: Regulatory Candy Specialist
 
 Once the threat actor got in to the environment, they were interested in another type of recon and were trying to figure out how to do it. Who helped them indirectly?
+
+
+
+
+
+
+Based off of the answer from Q3, how many unique IP addresses did they obtain this file from?
+ProcessEvents
+| where process_commandline contains "controller.exe"
+| distinct process_commandline
+Answer: 14
+
+How many total domains do these IPs resolve to?
+PassiveDns
+| where ip has_any("196.2.219.94","150.74.199.69","221.223.15.98","52.229.194.167","55.149.106.154","68.45.221.34","131.76.157.178","206.102.244.26","131.166.76.223","187.192.151.88","206.107.129.150","120.169.249.54","129.200.152.101","222.21.241.227")
+| distinct domain
+Answer: 9
+
+Which IP address is from the country where the Nile River is located in?
+Answer: 196.2.219.94
+
+Which IP address is from the country that is the last Grand Duchy in the world?
+Answer: 131.166.76.223
+
+What tool did the threat actor most likely install for final actions on objectives?
+
+
+
+
 
 
 
