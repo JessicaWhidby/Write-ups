@@ -1,0 +1,105 @@
+SOURCE
+https://kc7cyber.com/challenges/81
+
+STEPS TAKEN
+Section 1: A Quick KQL 101
+How many employees are in the company?
+Employees
+| count
+Answer: 1867
+
+Which employee has the IP address: 10.10.0.1?
+Employees
+| where ip_addr == "10.10.0.1"
+Answer: Shirley Jackson
+
+How many emails did Wayne Sutton, the Marketing Coordinator, receive?
+let wayne_email=
+Employees
+| where name == "Wayne Sutton" and role == "Marketing Coordinator"
+| project email_addr;
+Email
+| where recipient in (wayne_email)
+Answer: 46
+
+How many distinct senders were seen in the email logs from scavengers-r-us.org?
+Email
+| where sender contains "scavengers-r-us.org"
+| distinct sender
+Answer: 6107
+
+How many unique URLs (websites) did Patricia Robinson visit?
+let patricia_ip=
+Employees
+| where name == "Patricia Robinson"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (patricia_ip)
+| distinct url
+Answer: 61
+
+How many domains in the PassiveDns records contain the word “power”?
+PassiveDns
+| where domain contains "power"
+| distinct domain
+Answer: 60
+
+What IP starting with a 196. did the domain critical-power.net resolve to?
+PassiveDns
+| where domain contains "critical-power.net"
+| distinct ip
+Answer: 196.98.239.46
+
+How many unique URLs were browsed by employees named “Karen”?
+let karen_ips=
+Employees
+| where name contains "Karen"
+| project ip_addr;
+OutboundNetworkEvents
+| where src_ip in (karen_ips)
+| distinct url
+Answer: 369
+
+
+Section 2: Ghost In The Wire (Flee You Mortal Peasant)
+The threat actors exfiltrated data about your secret energy program. Under what filename did they stage the exfiltration data?
+ProcessEvents
+| where process_commandline contains "copy"
+Then:
+ProcessEvents
+| where hostname == "IYIP-DESKTOP"
+| where timestamp >= datetime(2323-07-28T14:09:20.000Z)
+Answer: ScooterEnergyResearch.zip
+
+How many machines (hosts) did the actors exfiltrate data from?
+ProcessEvents
+| where process_commandline contains "C:\\ScooterEnergyResearch" and process_commandline contains "Copy-Item"
+Answer: 4
+
+What command did the threat actor use to gather the data to be exfiltrated?
+Answer: Get-ChildItem -Recurse -Force -ErrorAction SilentlyContinue -Filter *.docx,*.ppt,*.pdf,*.xlsx | ForEach-Object {Copy-Item $_.FullName "C:\ScooterEnergyResearch"}
+
+During the staging process, what command did the threat actor use to compress the exfiltrated data?
+Answer: Compress-Archive -Path "C:\ScooterEnergyResearch" -DestinationPath "C:\ScooterEnergyResearch.zip" -Force
+
+The threat actors used a command to exfiltrate the data using a common service. What was the subject?
+Answer: Game Set Match
+
+What command did the operators use to establish persistence on their victims?
+Answer: schtasks /create /sc hourly /tn "IsThisYourKing" /tr "C:\\Windows\\Temp\\ggwp.exe" /ru SYSTEM
+
+What command did they use to acquire most of the credentials?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
