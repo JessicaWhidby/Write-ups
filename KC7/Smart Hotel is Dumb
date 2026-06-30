@@ -1,0 +1,150 @@
+SOURCE
+https://kc7cyber.com/challenges/2479
+
+STEPS TAKEN
+Section 1: Public Warning Siren
+The alerts fired on the 5th of February. Oof, they were rated high as well. What was the name of the alert?
+SecurityAlerts
+| where severity == "high"
+| where timestamp >= datetime(2026-02-05)
+Answer: Trojan.IoTBot.PhantomGrid
+
+What is the filepath mentioned in the alert?
+Answer: /tmp/iot-update.bin
+
+On how many devices does the file appear?
+FileCreationEvents
+| where filename == "iot-update.bin"
+Answer: 28
+
+When did it first appear? (Paste the timestamp in the TZ format, ISO8601 in the ADX settings.)
+Answer: 2026-02-05T03:33:12.000Z
+
+Which VLAN contains the most devices?
+DeviceInfo
+| summarize count() by vlan
+Answer: room_iot
+
+
+Section 2: Heartbeat Monitor
+What is the name of the process involved in the execution of the commands you found?
+ProcessEvents
+| where timestamp >= datetime(2026-02-05)
+Answer: sh
+
+What interval was provided for the beaconing?
+Answer: 60
+
+What is the domain hardcoded in the commands?
+Answer: iot-botnet-c2.net
+
+Which IP address did the domain resolve to?
+PassiveDns
+| where domain == "iot-botnet-c2.net"
+| where qtype == "A"
+Answer: 185.203.116.45
+
+How many times did a connection happen to the threat actor's IP?
+NetworkFlow
+| where dest_ip == "185.203.116.45"
+Answer: 113037
+
+How many days did the beaconing last?
+NetworkFlow
+| where dest_ip == '185.203.116.45'
+| make-series beacon = count() on timestamp from datetime(2026-02-05T03:35:52.000Z) to datetime(2026-02-11T23:59:58.000Z) step 1h by src_ip
+| render timechart
+Answer: 6
+
+
+Section 3: Screaming Into The Void
+What type of attack is often performed using a botnet?
+Answer: DDOS
+
+What is the IP address with the highest number of hits?
+NetworkFlow
+| where timestamp >= datetime(2026-02-11)
+| summarize count() by dest_ip
+Answer: 45.95.147.236
+
+How many times total was that IP hit?
+NetworkFlow
+| where dest_ip == "45.95.147.236"
+Answer: 18925
+
+When was the first connection made? (same as before, TZ format)
+Answer: 2026-02-10T04:42:21.000Z
+
+How many 'bursts' were there?
+NetworkFlow
+| where dest_ip == "45.95.147.236"
+| distinct timestamp
+Answer: 757
+
+What is the full command that launched the attack?
+Answer: /tmp/iot-update.bin --attack=udp --target=45.95.147.236 --port=80
+
+
+Section 4: Knock-Knock
+Which other domain in .net is linked to that IP?
+PassiveDns
+| where rdata == "185.203.116.45"
+| distinct domain
+Answer: hotel-firmware-check.net
+
+Let's pivot on those domains to find all the associated IP addresses. Which IP address is the longest?
+let dmns=
+PassiveDns
+| where rdata == "185.203.116.45"
+| distinct domain;
+PassiveDns
+| where domain in (dmns)
+| where qtype == "A"
+| distinct rdata
+Answer: 116.184.156.238
+
+Which IP address repeatedly tried connecting to the IoT devices?
+let dmns=
+PassiveDns
+| where rdata == "185.203.116.45"
+| distinct domain;
+let ips=
+PassiveDns
+| where domain in (dmns)
+| where qtype == "A"
+| distinct rdata;
+NetworkFlow
+| where src_ip in (ips)
+Answer: 7.22.171.109
+
+How many ports were repeatedly scanned?
+let dmns=
+PassiveDns
+| where rdata == "185.203.116.45"
+| distinct domain;
+let ips=
+PassiveDns
+| where domain in (dmns)
+| where qtype == "A"
+| distinct rdata;
+NetworkFlow
+| where src_ip in (ips)
+| summarize count() by dest_port
+Answer: 9
+
+Two of those ports are typical for IoT devices, one more secure than the other. Which protocol do they use?
+Answer: MQTT
+
+What are the first two words of the description for each and every login attempts?
+let dmns=
+PassiveDns
+| where rdata == "185.203.116.45"
+| distinct domain;
+let ips=
+PassiveDns
+| where domain in (dmns)
+| where qtype == "A"
+| distinct rdata;
+AuthenticationEvents
+| where src_ip in (ips)
+Answer: Default credential
