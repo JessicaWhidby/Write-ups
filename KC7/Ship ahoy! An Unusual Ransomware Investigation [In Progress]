@@ -1,0 +1,181 @@
+SUMMARY
+FokkeBV was ransomed! But this isn't just another ransomware scenario. The real puzzle is figuring out how they actually got in.
+
+SOURCE
+https://kc7cyber.com/challenges/1526
+
+STEPS TAKEN
+Section 1: Brainz 4 Life
+What is the filename of the ransom note?
+Answer: z0mbiz_ate_uR_f!lez.txt
+
+What is the sha256 of the ransom note?
+FileCreationEvents
+| where filename contains "z0mbiz"
+Answer: 4e10421ccbd37461dd51c59e719e401ca3bcb6291cabdccccbe3343cd5e43755
+
+When was the ransom note first created?
+Answer: 2025-10-27T09:17:44.000Z
+
+What file extension is added to existing files once they've been encrypted?
+FileCreationEvents
+| where hostname == "XRGA-LAPTOP"
+| where timestamp >= datetime(2025-10-27T09:17:44.000Z)
+Answer: Z0mbyt3
+
+How many distinct commands can you find?
+let comp_hosts=
+FileCreationEvents
+| where filename contains "z0mbiz"
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| summarize count() by process_commandline
+Answer: 20
+
+When was the last command run?
+let comp_hosts=
+FileCreationEvents
+| where filename contains "z0mbiz"
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where process_commandline contains "reg delete"
+Answer: 2025-10-28T10:59:26.000Z
+
+What is the name of the script?
+let comp_hosts=
+FileCreationEvents
+| where filename contains "z0mbiz"
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where process_commandline contains ".bat"
+| summarize count() by process_commandline
+Answer: z0mbytes.bat
+
+On which hostname was the file created?
+let comp_hosts=
+FileCreationEvents
+| where filename contains "z0mbiz"
+| distinct hostname;
+ProcessEvents
+| where hostname in (comp_hosts)
+| where process_commandline contains ".bat"
+Answer: DC_offices
+
+What domain did they download the batch file from?
+Answer: traintofokke.boo
+
+What is the name of the user they created for persistence on the DC?
+ProcessEvents
+| where hostname == "DC_offices"
+Answer: cordyceps
+
+What is the final command they used to push the batch file on the machines?
+Answer: gpupdate /force
+
+Which IP address contains 11 numbers?
+PassiveDns
+| where domain == "traintofokke.boo"
+| where qtype == "A"
+| distinct rdata
+Answer: 206.188.196.20
+
+What other domain did you find? Answer with only one of them.
+let ips=
+PassiveDns
+| where domain == "traintofokke.boo"
+| where qtype == "A"
+| distinct rdata;
+PassiveDns
+| where rdata in (ips)
+| distinct domain
+Answer: yummybrains.food
+
+This sidequest is useful, because now we can check if any of those IP addresses have been used to log into the domain controller! How many results did you get?
+let ips=
+PassiveDns
+| where domain == "traintofokke.boo"
+| where qtype == "A"
+| distinct rdata;
+let domains=
+PassiveDns
+| where rdata in (ips)
+| project domain;
+let ips2=
+PassiveDns
+| where domain in (domains)
+| where qtype == "A"
+| distinct rdata;
+AuthenticationEvents
+| where src_ip in (ips2)
+Answer: 1
+
+What username was logged into by one of the malicious IP addresses?
+Answer: anbonny
+Timestamp: 2025-10-25T07:56:03.000Z
+
+What is the third hostname they logged into?
+AuthenticationEvents
+| where user_agent == "Mozilla/5.0 (X11; Linux x86_64; rv:1.9.5.20) Gecko/2016-11-30 03:32:34 Firefox/3.8"
+Answer: DC_warehouses
+
+What is the full name of the compromised user?
+Employees
+| where username == "anbonny"
+Answer: Anne Bonny
+
+Which legitimate Windows sysinternal tool did they use to move from one machine to the other?
+ProcessEvents
+| where hostname == "EWSI-LAPTOP"
+| where timestamp >= datetime(2025-10-25T07:56:03.000Z)
+Answer: PSExec.exe
+
+Which full command show they gathered intel on the domain controllers?
+Answer: Get-ADDomainController -filter * | Select-Object -Property Name, Domain, IPv4Address, OperatingSystem | Export-Csv -Path C:\Windows\Temp\DClist.csv -NoTypeInformation
+
+What password did they set for the archived documents?
+Answer: br@!nz
+
+There is one last command in there that is worth our attention. The threat actor wanted to maintain access to Anne's machine. Persistence is key for them, otherwise all that work is for nothing, and they have to start over. What technique did they use to achieve this? (two words)
+Answer: scheduled task
+
+What is the last search the threat actor made on the company's website?
+let ips=
+PassiveDns
+| where domain == "traintofokke.boo"
+| where qtype == "A"
+| distinct rdata;
+let domains=
+PassiveDns
+| where rdata in (ips)
+| project domain;
+let ips2=
+PassiveDns
+| where domain in (domains)
+| where qtype == "A"
+| distinct rdata;
+InboundNetworkEvents
+| where src_ip in (ips2)
+Answer: no more shipping
+
+
+Section 2: Are You Ishmael?
+What is the username of the first compromised employee?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
