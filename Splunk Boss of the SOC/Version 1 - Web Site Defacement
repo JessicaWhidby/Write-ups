@@ -1,4 +1,3 @@
-Web Site Defacement -
 What is the likely IPv4 address of someone from the Po1s0n1vy group scanning imreallynotbatman.com for web application vulnerabilities?
 For this one, I initially just queried: "imreallynotbatman.com". The left pane showed 4 hosts identified: suricata-ids.waynecorpinc.local, splunk-02, 192.168.250.1, we1149srv.
 Sources starting with 192.168 would be internal. I also hypothesized that splunk-02 would be internal. suricata-ids.waynecorpinc.local ends with .local, also indicating that it is internal, but I checked the IP to be sure anyway. It was also a 192.168 IP, so the last option is we1149srv. I clicked that host and was shown an IP of 40.80.148.42.
@@ -57,4 +56,41 @@ What was the first brute force password used?
 This hint was already revealed, I assume from taking so long so far:
 Login attempts will use the HTTP POST method, and they will include some obvious fields that you can search for in the form_data field of stream:http events.
 So I built my query around that, and this is what I came up with:
-dest_ip=192.168.250.70 sourcetype="stream:http" "POST" "*pass*"
+index="botsv1" 23.22.63.114 POST sourcetype="stream:http" "*passwd=*"| sort + _time
+And it showed a password of "12345678"
+
+One of the passwords in the brute force attack is James Brodsky's favorite Coldplay song. We are looking for a six character word on this one. Which is it?
+This hints were already revealed:
+If you have not done so already, try to extract the attempted password into a new field using the "rex" SPL command and a regular expression. Having the password attempt in its own field will serve you well for the next several questions!
+It's not hard to get a list of songs by the artist. Once you have that,use the "len()" function of the "eval" SPL command. For Splunk style points, use a lookup table to match the password attempts with songs.
+Honestly, I searched Coldplay songs with 6 letters 1 by 1 here:
+index="botsv1" 23.22.63.114 POST  sourcetype="stream:http" "*passwd=(song title)"
+And "yellow" had a hit.
+
+What was the correct password for admin access to the content management system running "imreallynotbatman.com"?
+The hint that was revealed was:
+From the previous questions, you should know how to extract the password attempts. You should also know what IP is submitting passwords. Are any other IP addresses submitting passwords?
+So with that, I filtered OUT the previously used IP, and found the answer was: batman.
+
+What was the average password length used in the password brute forcing attempt?
+These were the hints revealed:
+Calculate the length of every password attempt and store the result in a new field. Then calulate the average of that new field with a stats command. Use eval to average, or just visually inspect.
+Then calulate the average of that new length field with a stats command, and finally use eval to round, or just manually round.
+Well, since I didn't manage to get rex going properly earlier, now was the time. I admittedly needed some help here, but it ended up as:
+index="botsv1"  23.22.63.114 POST  sourcetype="stream:http" "*passwd=*"
+| rex field=form_data "passwd=(?<password>[^&]*)"         //With the & saying where to stop
+| eval password_length=len(password)
+| stats avg(password_length) as average_password_length
+And the answer was 6.
+
+How many seconds elapsed between the time the brute force password scan identified the correct password and the compromised login?
+index="botsv1"  23.22.63.114 POST  sourcetype="stream:http" "*passwd=batman"
+This query shows when the guess was made: 8/10/16 at 9:46:33.689 PM	
+I then searched:
+index="botsv1" "*passwd=batman*" sourcetype="stream:http" POST | sort + _time
+And used an online calculator to calculate the time between the 2 events as 92.17 seconds.
+
+How many unique passwords were attempted in the brute force attempt?
+Had to go back to rex, and learn a way to filter unique values for this one.
+index="botsv1" "*passwd=*" sourcetype="stream:http" POST |   rex field=form_data "passwd=(?<password>\w+)" | stats dc(password) as "Unique"
+Answer: 412
