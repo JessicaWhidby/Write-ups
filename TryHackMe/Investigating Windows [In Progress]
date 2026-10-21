@@ -1,0 +1,47 @@
+Whats the version and year of the windows machine?
+I opened up Settings and went to System and About. There, it mentions that this a Windows Server 2016 machine.
+
+Which user logged in last?
+For this one, Event Viewer was likely the best option. Open the Security tab, and go to Filter. Windows logins are code 4624, so put that into the filter (be sure to look at the second to the latest, as the latest is you!) the answer is: Administrator
+
+When did John log onto the system last?
+The hint in the lab says to use cmd for this, so I tried:
+net user john
+Answer is: 03/02/2019 5:48:32 PM
+
+What IP does the system connect to when it first starts?
+10.34.2.3 - you can see this when the machine boots up.
+
+What two accounts had administrative privileges (other than the Administrator user)?
+Run:
+net user
+To get a list of users on the system. Then go through them (net user Jenny, for example) to see who has Administrators in their groups.
+Alternatively, net localgroup Administrators.
+Answer: Guest, Jenny
+
+Whats the name of the scheduled task that is malicous.
+Open Task Scheduler. "Clean file system" looks pretty odd.
+
+What file was the task trying to run daily?
+Go to Actions within the previous task: nc.ps1
+
+What port did this file listen locally for?
+Keep reading the line found above: 1348
+
+When did Jenny last logon?
+net user Jenny
+Answer: Never
+
+At what date did the compromise take place?
+I didn't mention it, but nc.ps1 is in the TMP folder. The file and folder were last modified on 03/02/2019.
+
+During the compromise, at what time did Windows first assign special privileges to a new logon?
+The hint helpfully reveals which Event ID to look for: To find the first time Windows assigned special privileges during the compromise, check the Security log for Event ID 4672.
+That should be 02/13/2019 08:14:30 AM. However, it seems I'm not the only one unable to get what should theoretically be the correct answer to work, so I'll go with what they want: 03/02/2019 04:04:49 PM
+
+What tool was used to get Windows passwords?
+Going back to that TMP folder, we can see an application called "mim." Prior knowledge tells me this is likely Mimikatz.
+
+What was the attackers external control and command servers IP?
+
+
