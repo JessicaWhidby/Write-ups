@@ -1,0 +1,54 @@
+What was the most likely IPv4 address of we8105desk on 24AUG2016?
+I ran this query with a time filter for that date:
+index="botsv1" we8105desk
+And the most common source IP was 192.168.250.100.
+
+Amongst the Suricata signatures that detected the Cerber malware, which one alerted the fewest number of times? Submit ONLY the signature ID value as the answer.
+I searched the Suricata sourcetype for "Ceber":
+index="botsv1" "Cerber" sourcetype=suricata
+And then looked to the left to find alert.signatureid and found one that only went off once: 2816763.
+
+What fully qualified domain name (FQDN) does the Cerber ransomware attempt to direct the user to at the end of its encryption phase?
+The only external IP (not starting with 192.168) as a destination is 85.93.0.0. Adding that to the search and sorting by DNS:
+index="botsv1" 85.93.0.0 source="stream:dns"
+That reveals: ns1.guardomicro.com
+But that is not the correct answer. I then tried to sort on the souce IP of our infected computer, and rule out ARPA, the company itself, and Microsoft:
+index="botsv1" sourcetype="stream:dns" src_ip=192.168.250.100 NOT arpa NOT waynecorpinc NOT microsoft | stats count by query
+And that reveals: cerberhhyed5frqa.xmfir0.win
+
+What was the first suspicious domain visited by we8105desk on 24AUG2016?
+Putting that information from before into a neater-to-read table:
+index="botsv1" sourcetype="stream:dns" src_ip=192.168.250.100 NOT arpa NOT waynecorpinc NOT microsoft | table _time,query
+And scrolling for a bit reveals: solidaritedeproximite.org
+
+During the initial Cerber infection a VB script is run. The entire script from this execution, pre-pended by the name of the launching .exe, can be found in a field in Splunk. What is the length of the value of this field?
+
+
+
+
+
+
+What is the name of the USB key inserted by Bob Smith?
+I tried various versions of his username, "usb", the computer name, etc. all to end up with nothing. On that note, I went searching for other ways to find this information. A quick google search of how to find USB insert information led me to "friendlynames". I tried this:
+index="botsv1" friendlyname
+And got: MIRANDA_PRI
+
+Bob Smith's workstation (we8105desk) was connected to a file server during the ransomware outbreak. What is the IPv4 address of the file server?
+I know his IP, and that a file server likely communicates over SMB:
+index="botsv1" src_ip=192.168.250.100 source="stream:smb" 
+|  stats count by path
+Top result was 192.168.250.20.
+
+How many distinct PDFs did the ransomware encrypt on the remote file server?
+I filtered on the pdf file type and the host name of the IP above. I also excluded DLLs because there is a .pdf.dll file in the mix. And I showed a unique count:
+index="botsv1" "*.pdf*" NOT dll host=we9041srv
+| stats dc(Relative_Target_Name)
+Answer: 257
+
+The VBscript found in question 204 launches 121214.tmp. What is the ParentProcessId of this initial launch?
+I started with:
+index="botsv1" "121214.tmp"  EventDescription="Process Create" | sort + _time
+I just sorted through all 7 and found 3968, which also led me to the VBS script name of 20429.vbs.
+
+The Cerber ransomware encrypts files located in Bob Smith's Windows profile. How many .txt files does it encrypt?
+
